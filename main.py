@@ -38,6 +38,7 @@ def optimize_shape(filepath, params):
     optimizer = params.get("optimizer", AdamUniform) # Which optimizer to use
     use_tr = params.get("use_tr", True) # Optimize a global translation at the same time
     loss_function = params.get("loss", "l2") # Which loss to use
+    bilaplacian = params.get("bilaplacian", True) # Use the bilaplacian or the laplacian regularization loss
 
     # Load the scene
     scene_params = load_scene(filepath)
@@ -126,15 +127,19 @@ def optimize_shape(filepath, params):
 
             # Compute image loss
             if loss_function == "l1":
-                loss = (opt_imgs - ref_imgs).abs().mean()
+                im_loss = (opt_imgs - ref_imgs).abs().mean()
             elif loss_function == "l2":
-                loss = (opt_imgs - ref_imgs).square().mean()
+                im_loss = (opt_imgs - ref_imgs).square().mean()
 
             # Add regularization
-            if reg > 0:
-                loss = loss + reg * (L@v_unique).square().mean() # TODO: add bilaplacian baseline
+            if bilaplacian:
+                reg_loss = (L@v_unique).square().mean()
+            else:
+                reg_loss = (v_unique * (L @v_unique)).mean()
 
-            result_dict["losses"].append(loss.detach().cpu().numpy().copy())
+            loss = im_loss + reg * reg_loss
+
+            result_dict["losses"].append((im_loss.detach().cpu().numpy().copy(), (L@v_unique.detach()).square().mean().cpu().numpy().copy()))
             # Backpropagate
             opt.zero_grad()
             loss.backward()
