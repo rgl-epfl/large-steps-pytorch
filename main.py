@@ -1,31 +1,24 @@
 import torch
-import mitsuba
-mitsuba.set_variant("cuda_ad_rgb")
-from mitsuba.core import Float, Thread
-from mitsuba.core.xml import load_file
-from mitsuba.python.util import traverse
 import time
 import os
 from tqdm import tqdm
 
 from optimize import AdamUniform
-from utils import load_shape
 from render import NVDRenderer
 from geometry import compute_matrix, remove_duplicates, laplacian_cot, laplacian_uniform, compute_face_normals, compute_vertex_normals
 from parameterize import to_differential, from_differential
-from solvers import CholeskySolver
+from load_xml import load_scene
 
 def optimize_shape(filepath, params):
     """
     Optimize a shape given a scene.
 
-    This will expect a Mitsuba scene as input containing
+    This will expect a Mitsuba scene as input containing the cameras, envmap and
+    source and target models.
 
     Parameters
     ----------
-    filepath : str
-        Path to the XML file of the scene to optimize.
-    params : dict
+    filepath : str Path to the XML file of the scene to optimize. params : dict
         Dictionary containing all optimization parameters.
     """
     opt_time = params.get("time", -1) # Optimization time (in minutes)
@@ -47,22 +40,20 @@ def optimize_shape(filepath, params):
     loss_function = params.get("loss", "l2") # Which loss to use
 
     # Load the scene
-    folder, scene_file = os.path.split(filepath)
-    scene_name, ext = os.path.splitext(scene_file)
-    assert ext == ".xml", f"Unexpected file type: '{ext}'"
-    Thread.thread().file_resolver().prepend(folder)
-    scene = load_file(filepath)
-    scene_params = traverse(scene)
+    scene_params = load_scene(filepath)
 
     # Load reference shape
-    v_ref, n_ref, f_ref = load_shape(scene_params, 'mesh-target')
+    v_ref = scene_params["mesh-target"]["vertices"]
+    n_ref = scene_params["mesh-target"]["normals"]
+    f_ref = scene_params["mesh-target"]["faces"]
     # Load source shape
-    v_src, n_src, f_src = load_shape(scene_params, 'mesh-source')
+    v_src = scene_params["mesh-source"]["vertices"]
+    f_src = scene_params["mesh-source"]["faces"]
     # Remove duplicates. This is necessary to avoid seams of meshes to rip apart during the optimization
     v_unique, f_unique, duplicate_idx = remove_duplicates(v_src, f_src)
 
     # Initialize the renderer
-    renderer = NVDRenderer(scene, shading=shading, boost=boost)
+    renderer = NVDRenderer(scene_params, shading=shading, boost=boost)
 
     # Render the reference images
     ref_imgs = renderer.render(v_ref, n_ref, f_ref)
@@ -92,7 +83,7 @@ def optimize_shape(filepath, params):
 
     opt = optimizer([u_unique], lr=lr)
     # TODO: this is an ugly workaround to reproduce the results from the paper, we shouldn't do this
-    opt_tr = optimizer([tr], lr=lr/(1+lambda_))
+    opt_tr = optimizer([tr], lr=lr/(1+lambda_)) # TODO: put this in the same optimizer
 
     # Set values for time and step count
     if opt_time > 0:

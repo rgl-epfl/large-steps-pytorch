@@ -2,7 +2,6 @@ import torch
 import numpy as np
 import nvdiffrast.torch as dr
 from utils import matrix_to_torch, persp_proj
-from mitsuba.python.util import traverse
 
 class SphericalHarmonics:
     """
@@ -96,33 +95,32 @@ class NVDRenderer:
     This class encapsulates the nvdiffrast renderer [Laine et al 2020] to render
     objects given a number of viewpoints and rendering parameters.
     """
-    def __init__(self, scene, shading=True, boost=1.0):
+    def __init__(self, scene_params, shading=True, boost=1.0):
         """
         Initialize the renderer.
 
         Parameters
         ----------
-        scene : mitsuba.render.Scene
-            The scene to render. Contains the envmap and camera info.
+        scene_params : dict
+            The scene parameters. Contains the envmap and camera info.
         shading: bool
             Use shading in the renderings, otherwise render silhouettes. (default True)
         boost: float
             Factor by which to multiply shading-related gradients. (default 1.0)
         """
         # We assume all cameras have the same parameters (fov, clipping planes)
-        sensors = scene.sensors()
-        film = sensors[0].film()
-        params = traverse(sensors[0])
-        near = params["near_clip"]
-        far = params["far_clip"]
-        self.fov_x = params["x_fov"]
-        film_size = film.size().numpy()
-        self.res = np.flip(film_size)
-        ar = film_size[0] / film_size[1]
+        near = scene_params["near_clip"]
+        far = scene_params["far_clip"]
+        self.fov_x = scene_params["fov"]
+        w = scene_params["res_x"]
+        h = scene_params["res_y"]
+        self.res = (h,w)
+        ar = w/h
+        x = torch.tensor([[1,2,3,4]], device='cuda')
         self.proj_mat = persp_proj(self.fov_x, ar, near, far)
 
         # Construct the Model-View-Projection matrices
-        self.view_mats = torch.stack([matrix_to_torch(sensor.world_transform().eval(0).inverse().matrix) for sensor in sensors])
+        self.view_mats = torch.stack(scene_params["view_mats"])
         self.mvps = self.proj_mat @ self.view_mats
 
         self.boost = boost
@@ -131,9 +129,8 @@ class NVDRenderer:
         # Initialize rasterizing context
         self.glctx = dr.RasterizeGLContext()
         # Load the environment map
-        envmap_params = traverse(scene.emitters()[0])
-        w,h = envmap_params['resolution']
-        envmap = (envmap_params['scale'] * envmap_params['data']).torch().view((h, w, -1))
+        w,h,_ = scene_params['envmap'].shape
+        envmap = scene_params['envmap_scale'] * scene_params['envmap']
         # Precompute lighting
         self.sh = SphericalHarmonics(envmap)
         # Render background for all viewpoints once
