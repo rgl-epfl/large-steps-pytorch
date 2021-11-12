@@ -70,20 +70,25 @@ def optimize_shape(filepath, params):
 
     if use_tr:
         tr.requires_grad = True
-        opt_params.append(tr)
+        tr_params = {'params': tr}
+        if smooth:
+            # The results in the paper were generated using a slightly different
+            # implementation of the system matrix than this one, so we need to
+            # scale the step size by this factor to match the results exactly.
+            tr_params['lr'] = lr / (1 + lambda_)
+        opt_params.append(tr_params)
     if smooth:
         # Compute the system matrix and parameterize
         M = compute_matrix(v_unique, f_unique, lambda_)# / (1+lambda_)
         u_unique = to_differential(M, v_unique)#/(1+lambda_)
         u_unique.requires_grad = True
-        opt_params.append(u_unique)
+        opt_params.append({'params': u_unique})
     else:
         v_unique.requires_grad = True
-        opt_params.append(v_unique)
+        opt_params.append({'params': v_unique})
 
-    opt = optimizer([u_unique], lr=lr)
+    opt = optimizer(opt_params, lr=lr)
     # TODO: this is an ugly workaround to reproduce the results from the paper, we shouldn't do this
-    opt_tr = optimizer([tr], lr=lr/(1+lambda_)) # TODO: put this in the same optimizer
 
     # Set values for time and step count
     if opt_time > 0:
@@ -134,9 +139,7 @@ def optimize_shape(filepath, params):
             opt.zero_grad()
             loss.backward()
             # Update parameters
-            #u_unique.grad *= (1+lambda_)**2
             opt.step()
-            opt_tr.step()
 
             it += 1
             t = time.perf_counter()
