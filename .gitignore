@@ -1,5 +1,4 @@
-__pycache__/*
-python/__pycache__/*
+*__pycache__*
 scenes/*
-
+*.ipynb_checkpoints*
 

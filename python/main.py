@@ -33,7 +33,7 @@ def optimize_shape(filepath, params):
     save_mesh = params.get("save_mesh", False) # Also save the mesh when saving
     OUTPUT_DIR = params.get("output", "/home/bnicolet/Documents/.optim") # Where to save the images/meshes
     cotan = params.get("cotan", False) # Use cotan laplacian, otherwise use the combinatorial one (more efficient)
-    solver = params.get("solver", 'Cholesky') # Solver to use
+    solver = params.get("solver", 'Cholesky', choices={"Cholesky", "CG"}) # Solver to use
     lambda_ = params.get("lambda", 1.0) # Hyperparameter lambda of our method, used to compute the matrix (I + lambda_*L)
     subdiv = params.get("subdiv", -1) # Time step(s) at which to remesh
     optimizer = params.get("optimizer", AdamUniform) # Which optimizer to use
@@ -112,7 +112,7 @@ def optimize_shape(filepath, params):
             #TODO: remeshing
             # Get cartesian coordinates
             if smooth:
-                v_unique = from_differential(M, u_unique)
+                v_unique = from_differential(M, u_unique, solver)
 
             #TODO: save, timing
             # Get the version of the mesh with the duplicates
@@ -165,6 +165,7 @@ def optimize_shape(filepath, params):
     return result_dict
 
 if __name__ == "__main__":
+    #TODO: update this
     import argparse
 
     parser = argparse.ArgumentParser(description="Optimize the geometry of a mesh.")

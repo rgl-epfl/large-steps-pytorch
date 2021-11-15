@@ -86,7 +86,6 @@ class Solver:
         """
         raise NotImplementedError()
 
-
 class CholeskySolver(Solver):
     """
     Cholesky solver.
