@@ -2,6 +2,7 @@ import torch
 import time
 import os
 from tqdm import tqdm
+import numpy as np
 
 from optimize import AdamUniform
 from render import NVDRenderer
@@ -80,8 +81,8 @@ def optimize_shape(filepath, params):
         opt_params.append(tr_params)
     if smooth:
         # Compute the system matrix and parameterize
-        M = compute_matrix(v_unique, f_unique, lambda_)# / (1+lambda_)
-        u_unique = to_differential(M, v_unique)#/(1+lambda_)
+        M = compute_matrix(v_unique, f_unique, lambda_)
+        u_unique = to_differential(M, v_unique)
         u_unique.requires_grad = True
         opt_params.append({'params': u_unique})
     else:
@@ -101,7 +102,8 @@ def optimize_shape(filepath, params):
 
     # Dictionary that is returned in the end, contains useful information for debug/analysis
     result_dict = {"vert_steps": [], "tr_steps": [], "f": [f_src.cpu().numpy().copy()],
-                "losses": [], "im_ref": ref_imgs.cpu().numpy().copy()}
+                "losses": [], "im_ref": ref_imgs.cpu().numpy().copy(),
+                "v_ref": v_ref.cpu().numpy().copy(), "f_ref": f_ref.cpu().numpy().copy()}
     #solver = CholeskySolver(M)
     # Optimization loop
     with tqdm(total=max(steps, opt_time), ncols=100, bar_format="{l_bar}{bar}| {n:.2f}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]") as pbar:
@@ -115,13 +117,12 @@ def optimize_shape(filepath, params):
             #TODO: save, timing
             # Get the version of the mesh with the duplicates
             v_opt = v_unique[duplicate_idx]
-            result_dict["vert_steps"].append(v_opt.detach().cpu().numpy().copy())
-            result_dict["tr_steps"].append(tr.detach().cpu().numpy().copy())
             # Recompute vertex normals
             face_normals = compute_face_normals(v_unique, f_unique)
             n_unique = compute_vertex_normals(v_unique, f_unique, face_normals)
             n_opt = n_unique[duplicate_idx]
 
+            # TODO: update cotan lap if used
             # Render images
             opt_imgs = renderer.render(tr + v_opt, n_opt, f_src)
 
@@ -139,7 +140,11 @@ def optimize_shape(filepath, params):
 
             loss = im_loss + reg * reg_loss
 
+            # Record optimization state for later processing
             result_dict["losses"].append((im_loss.detach().cpu().numpy().copy(), (L@v_unique.detach()).square().mean().cpu().numpy().copy()))
+            result_dict["vert_steps"].append(v_opt.detach().cpu().numpy().copy())
+            result_dict["tr_steps"].append(tr.detach().cpu().numpy().copy())
+
             # Backpropagate
             opt.zero_grad()
             loss.backward()
@@ -153,6 +158,10 @@ def optimize_shape(filepath, params):
             else:
                 pbar.update(min(opt_time, (t-t0)) - pbar.n)
 
+
+    result_dict["losses"] = np.array(result_dict["losses"])
+    result_dict["vert_steps"].append(v_opt.detach().cpu().numpy().copy())
+    result_dict["tr_steps"].append(tr.detach().cpu().numpy().copy())
     return result_dict
 
 if __name__ == "__main__":

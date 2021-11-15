@@ -165,7 +165,7 @@ def read_ply(filename):
 
     return data
 
-def writePLY(filename, V, F, VC = None):
+def write_ply(filename, V, F, VC = None):
     """
     Write a mesh as PLY with vertex colors.
 
@@ -180,7 +180,8 @@ def writePLY(filename, V, F, VC = None):
     VC : numpy.ndarray
         Vertex colors (optional).
     """
-    color = (VC*255).astype(np.uint8)
+    if VC is not None:
+        color = (VC*255).astype(np.uint8)
     f = open(filename, 'w')
     # headers
     string = 'ply\n'

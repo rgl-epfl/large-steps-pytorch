@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import nvdiffrast.torch as dr
-from utils import matrix_to_torch, persp_proj
+from utils import persp_proj
 
 class SphericalHarmonics:
     """
