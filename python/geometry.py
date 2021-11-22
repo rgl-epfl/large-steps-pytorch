@@ -11,6 +11,29 @@ def remove_duplicates(v, f):
     new_faces = inverse[f.long()]
     return unique_verts, new_faces, inverse
 
+def average_edge_length(verts, faces):
+    """
+    Compute the average length of alls edges in a given mesh.
+
+    Parameters
+    ----------
+    verts : torch.Tensor
+        Vertex positions.
+    faces : torch.Tensor
+        array of triangle faces.
+    """
+    face_verts = verts[faces]
+    v0, v1, v2 = face_verts[:, 0], face_verts[:, 1], face_verts[:, 2]
+
+    # Side lengths of each triangle, of shape (sum(F_n),)
+    # A is the side opposite v1, B is opposite v2, and C is opposite v3
+    A = (v1 - v2).norm(dim=1)
+    B = (v0 - v2).norm(dim=1)
+    C = (v0 - v1).norm(dim=1)
+
+    return (A + B + C).sum() / faces.shape[0] / 3
+
+
 def laplacian_cot(verts, faces):
     """
     Compute the cotangent laplacian

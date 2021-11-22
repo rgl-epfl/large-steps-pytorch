@@ -3,12 +3,16 @@ import time
 import os
 from tqdm import tqdm
 import numpy as np
+import sys
 
 from optimize import AdamUniform
 from render import NVDRenderer
-from geometry import compute_matrix, remove_duplicates, laplacian_cot, laplacian_uniform, compute_face_normals, compute_vertex_normals
+from geometry import *
 from parameterize import to_differential, from_differential
 from load_xml import load_scene
+from constants import REMESH_DIR
+sys.path.append(REMESH_DIR)
+from pyremesh import remesh_botsch
 
 def optimize_shape(filepath, params):
     """
@@ -24,7 +28,7 @@ def optimize_shape(filepath, params):
     """
     opt_time = params.get("time", -1) # Optimization time (in minutes)
     steps = params.get("steps", 100) # Number of optimization steps (ignored if time > 0)
-    lr = params.get("lr", 0.01) # Step size
+    step_size = params.get("step_size", 0.01) # Step size
     boost = params.get("boost", 1) # Gradient boost used in nvdiffrast
     smooth = params.get("smooth", True) # Use our method or not
     shading = params.get("shading", True) # Use shading, otherwise render silhouettes
@@ -32,7 +36,7 @@ def optimize_shape(filepath, params):
     cotan = params.get("cotan", False) # Use cotan laplacian, otherwise use the combinatorial one (more efficient)
     solver = params.get("solver", 'Cholesky') # Solver to use
     lambda_ = params.get("lambda", 1.0) # Hyperparameter lambda of our method, used to compute the matrix (I + lambda_*L)
-    subdiv = params.get("subdiv", -1) # Time step(s) at which to remesh
+    remesh = params.get("remesh", -1) # Time step(s) at which to remesh
     optimizer = params.get("optimizer", AdamUniform) # Which optimizer to use
     use_tr = params.get("use_tr", True) # Optimize a global translation at the same time
     loss_function = params.get("loss", "l2") # Which loss to use
@@ -65,29 +69,52 @@ def optimize_shape(filepath, params):
 
     # Initialize the optimized variables and the optimizer
     tr = torch.zeros((1,3), device='cuda', dtype=torch.float32)
-    opt_params = []
 
-    if use_tr:
-        tr.requires_grad = True
-        tr_params = {'params': tr}
-        if smooth:
-            # The results in the paper were generated using a slightly different
-            # implementation of the system matrix than this one, so we need to
-            # scale the step size by this factor to match the results exactly.
-            tr_params['lr'] = lr / (1 + lambda_)
-        opt_params.append(tr_params)
     if smooth:
         # Compute the system matrix and parameterize
         M = compute_matrix(v_unique, f_unique, lambda_)
         u_unique = to_differential(M, v_unique)
-        u_unique.requires_grad = True
-        opt_params.append({'params': u_unique})
-    else:
-        v_unique.requires_grad = True
-        opt_params.append({'params': v_unique})
 
-    opt = optimizer(opt_params, lr=lr)
-    # TODO: this is an ugly workaround to reproduce the results from the paper, we shouldn't do this
+    def initialize_optimizer(u, v, tr, lambda_, step_size):
+        """
+        Initialize the optimizer
+
+        Parameters
+        ----------
+        - u : torch.Tensor or None
+            Parameterized coordinates to optimize if not None
+        - v : torch.Tensor
+            Cartesian coordinates to optimize if u is None
+        - tr : torch.Tensor
+            Global translation to optimize if not None
+        - lambda_ : float
+            Hyper parameter of our method
+        - step_size ; float
+            Step size
+
+        Returns
+        -------
+        a torch.optim.Optimizer containing the tensors to optimize.
+        """
+        opt_params = []
+        if use_tr is not None:
+            tr.requires_grad = True
+            tr_params = {'params': tr}
+            if u is not None:
+                # The results in the paper were generated using a slightly different
+                # implementation of the system matrix than this one, so we need to
+                # scale the step size by this factor to match the results exactly.
+                tr_params['lr'] = step_size / (1 + lambda_)
+            opt_params.append(tr_params)
+            u.requires_grad = True
+            opt_params.append({'params': u})
+        else:
+            v.requires_grad = True
+            opt_params.append({'params': v})
+
+        return optimizer(opt_params, lr=step_size)
+
+    opt = initialize_optimizer(u_unique if smooth else None, v_unique, tr if use_tr else None, lambda_)
 
     # Set values for time and step count
     if opt_time > 0:
@@ -99,14 +126,55 @@ def optimize_shape(filepath, params):
 
     # Dictionary that is returned in the end, contains useful information for debug/analysis
     result_dict = {"vert_steps": [], "tr_steps": [], "f": [f_src.cpu().numpy().copy()],
-                "losses": [], "im_ref": ref_imgs.cpu().numpy().copy(),
+                "losses": [], "im_ref": ref_imgs.cpu().numpy().copy(), "im":[],
                 "v_ref": v_ref.cpu().numpy().copy(), "f_ref": f_ref.cpu().numpy().copy()}
-    #solver = CholeskySolver(M)
+
+    if type(remesh) == list:
+        remesh_it = remesh.pop(0)
+    else:
+        remesh_it = remesh
+
     # Optimization loop
     with tqdm(total=max(steps, opt_time), ncols=100, bar_format="{l_bar}{bar}| {n:.2f}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]") as pbar:
         while it < steps or (t-t0) < opt_time:
 
-            #TODO: remeshing
+            if it == remesh_it:
+                # Remesh
+                with torch.no_grad():
+                    if smooth:
+                        v_unique = from_differential(M, u_unique, solver)
+
+                    v_cpu = v_unique.cpu().numpy()
+                    f_cpu = f_unique.cpu().numpy()
+                    # Target edge length
+                    h = (average_edge_length(v_unique, f_unique)).cpu().numpy()*0.5
+
+                    # Run 5 iterations of the Botsch-Kobbelt remeshing algorithm
+                    v_new, f_new = remesh_botsch(v_cpu.astype(np.double), f_cpu.astype(np.int32), 5, h)
+
+                    v_src = torch.from_numpy(v_new).cuda().float().contiguous()
+                    f_src = torch.from_numpy(f_new).cuda().contiguous()
+
+                    v_unique, f_unique, duplicate_idx = remove_duplicates(v_src, f_src)
+                    result_dict["f"].append(f_new)
+                    # Recompute laplacian
+                    if cotan:
+                        L = laplacian_cot(v_unique, f_unique)
+                    else:
+                        L = laplacian_uniform(v_unique, f_unique)
+
+                    if smooth:
+                        # Compute the system matrix and parameterize
+                        M = compute_matrix(v_unique, f_unique, lambda_)
+                        u_unique = to_differential(M, v_unique)
+
+                    step_size *= 0.8
+                    opt = initialize_optimizer(u_unique if smooth else None, v_unique, tr if use_tr else None, lambda_, step_size)
+
+                # Get next remesh iteration if any
+                if type(remesh) == list and len(remesh) > 0:
+                    remesh_it = remesh.pop(0)
+
             # Get cartesian coordinates
             if smooth:
                 v_unique = from_differential(M, u_unique, solver)
@@ -170,13 +238,13 @@ if __name__ == "__main__":
     parser.add_argument("--name", type=str)
     parser.add_argument("--time", type=float, default=-1) #optimization time (in minutes)
     parser.add_argument("--steps", type=int, default=100)
-    parser.add_argument("--lr", type=float, default=0.01)
+    parser.add_argument("--step_size", type=float, default=0.01)
     parser.add_argument("--boost", type=float, default=1)
     parser.add_argument("--smooth", action="store_true")
     parser.add_argument("--reg", type=float, default=0.0)
     parser.add_argument("--output", type=os.path.abspath, default="/home/bnicolet/Documents/.optim")
     parser.add_argument("--influence", type=float, default=1.0)
-    parser.add_argument("--subdiv", type=int, default=-1)
+    parser.add_argument("--remesh", type=int, default=-1)
     parser.add_argument("--adam", action="store_true")
     parser.add_argument("--profile", action="store_true")
     parser.add_argument("--loss", type=str, default="l1")
