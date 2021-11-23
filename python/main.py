@@ -106,6 +106,7 @@ def optimize_shape(filepath, params):
                 # scale the step size by this factor to match the results exactly.
                 tr_params['lr'] = step_size / (1 + lambda_)
             opt_params.append(tr_params)
+        if u is not None:
             u.requires_grad = True
             opt_params.append({'params': u})
         else:
@@ -114,7 +115,7 @@ def optimize_shape(filepath, params):
 
         return optimizer(opt_params, lr=step_size)
 
-    opt = initialize_optimizer(u_unique if smooth else None, v_unique, tr if use_tr else None, lambda_)
+    opt = initialize_optimizer(u_unique if smooth else None, v_unique, tr if use_tr else None, lambda_, step_size)
 
     # Set values for time and step count
     if opt_time > 0:
