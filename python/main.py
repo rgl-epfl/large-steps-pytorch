@@ -33,7 +33,6 @@ def optimize_shape(filepath, params):
     smooth = params.get("smooth", True) # Use our method or not
     shading = params.get("shading", True) # Use shading, otherwise render silhouettes
     reg = params.get("reg", 0.0) # Regularization weight
-    cotan = params.get("cotan", False) # Use cotan laplacian, otherwise use the combinatorial one (more efficient)
     solver = params.get("solver", 'Cholesky') # Solver to use
     lambda_ = params.get("lambda", 1.0) # Hyperparameter lambda of our method, used to compute the matrix (I + lambda_*L)
     remesh = params.get("remesh", -1) # Time step(s) at which to remesh
@@ -62,10 +61,7 @@ def optimize_shape(filepath, params):
     ref_imgs = renderer.render(v_ref, n_ref, f_ref)
 
     # Compute the laplacian for the regularization term
-    if cotan:
-        L = laplacian_cot(v_unique, f_unique)
-    else:
-        L = laplacian_uniform(v_unique, f_unique)
+    L = laplacian_uniform(v_unique, f_unique)
 
     # Initialize the optimized variables and the optimizer
     tr = torch.zeros((1,3), device='cuda', dtype=torch.float32)
@@ -159,10 +155,7 @@ def optimize_shape(filepath, params):
                     v_unique, f_unique, duplicate_idx = remove_duplicates(v_src, f_src)
                     result_dict["f"].append(f_new)
                     # Recompute laplacian
-                    if cotan:
-                        L = laplacian_cot(v_unique, f_unique)
-                    else:
-                        L = laplacian_uniform(v_unique, f_unique)
+                    L = laplacian_uniform(v_unique, f_unique)
 
                     if smooth:
                         # Compute the system matrix and parameterize
@@ -188,7 +181,6 @@ def optimize_shape(filepath, params):
             n_unique = compute_vertex_normals(v_unique, f_unique, face_normals)
             n_opt = n_unique[duplicate_idx]
 
-            # TODO: update cotan lap if used
             # Render images
             opt_imgs = renderer.render(tr + v_opt, n_opt, f_src)
 
