@@ -97,7 +97,7 @@ def optimize_shape(filepath, params):
         a torch.optim.Optimizer containing the tensors to optimize.
         """
         opt_params = []
-        if use_tr is not None:
+        if tr is not None:
             tr.requires_grad = True
             tr_params = {'params': tr}
             if u is not None:
