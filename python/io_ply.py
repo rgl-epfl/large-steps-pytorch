@@ -125,11 +125,11 @@ def read_ply(filename):
 
         names = [x[0] for x in dtypes["vertex"]]
 
-        data["points"] = pd.read_csv(filename, sep=" ", header=None, engine="python",
+        data["vertices"] = pd.read_csv(filename, sep=" ", header=None, engine="python",
                                      skiprows=top, skipfooter=bottom, usecols=names, names=names)
 
-        for n, col in enumerate(data["points"].columns):
-            data["points"][col] = data["points"][col].astype(
+        for n, col in enumerate(data["vertices"].columns):
+            data["vertices"][col] = data["vertices"][col].astype(
                 dtypes["vertex"][n][1])
 
         if mesh_size :
@@ -139,12 +139,16 @@ def read_ply(filename):
             usecols = [1, 2, 3, 5, 6, 7, 8, 9, 10] if has_texture else [1, 2, 3]
             names = names[usecols]
 
-            data["mesh"] = pd.read_csv(
+            data["faces"] = pd.read_csv(
                 filename, sep=" ", header=None, engine="python", skiprows=top, usecols=usecols, names=names)
 
-            for n, col in enumerate(data["mesh"].columns):
-                data["mesh"][col] = data["mesh"][col].astype(
+            for n, col in enumerate(data["faces"].columns):
+                data["faces"][col] = data["faces"][col].astype(
                     dtypes["face"][n + 1][1])
+
+        # Convert to PyTorch array
+        data["vertices"] = torch.tensor(data["vertices"].to_numpy(), device='cuda')
+        data["faces"] = torch.tensor(data["faces"].to_numpy(), device='cuda')
 
     else:
         with open(filename, 'rb') as ply:
