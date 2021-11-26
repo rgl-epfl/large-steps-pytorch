@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 import nvdiffrast.torch as dr
-from utils import persp_proj
 
 class SphericalHarmonics:
     """
@@ -86,6 +85,30 @@ class SphericalHarmonics:
         h_n = torch.nn.functional.pad(normal_array, (0,1), 'constant', 1.0)
         l = (h_n.t() * (self.M @ h_n.t())).sum(dim=1)
         return l.t().view(n.shape)
+
+def persp_proj(fov_x=45, ar=1, near=0.1, far=100):
+    """
+    Build a perspective projection matrix.
+
+    Parameters
+    ----------
+    fov_x : float
+        Horizontal field of view (in degrees).
+    ar : float
+        Aspect ratio (w/h).
+    near : float
+        Depth of the near plane relative to the camera.
+    far : float
+        Depth of the far plane relative to the camera.
+    """
+    fov_rad = np.deg2rad(fov_x)
+    proj_mat = np.array([[-1.0 / np.tan(fov_rad / 2.0), 0, 0, 0],
+                      [0, np.float32(ar) / np.tan(fov_rad / 2.0), 0, 0],
+                      [0, 0, -(near + far) / (near-far), 2 * far * near / (near-far)],
+                      [0, 0, 1, 0]])
+    x = torch.tensor([[1,2,3,4]], device='cuda')
+    proj = torch.tensor(proj_mat, device='cuda', dtype=torch.float32)
+    return proj
 
 class NVDRenderer:
     """

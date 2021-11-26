@@ -1,5 +1,4 @@
 import torch
-from utils import safe_acos
 
 def remove_duplicates(v, f):
     """
@@ -229,6 +228,9 @@ def compute_face_normals(verts, faces):
     c = torch.cross(v[1] - v[0], v[2] - v[0])
     n = c / torch.norm(c, dim=0)
     return n
+
+def safe_acos(x):
+    return torch.acos(x.clamp(min=-1, max=1))
 
 def compute_vertex_normals(verts, faces, face_normals):
     """

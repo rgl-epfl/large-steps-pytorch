@@ -1,10 +1,26 @@
-from utils import torch_to_cupy, cupy_to_torch
 from torch.autograd import Function
 import numpy as np
 import scipy.sparse as sp
 import sksparse.cholmod as cholmod
 import cupy as cp
 import cupyx.scipy.sparse as cps
+
+from cupy._core.dlpack import toDlpack
+from cupy._core.dlpack import fromDlpack
+from torch.utils.dlpack import to_dlpack
+from torch.utils.dlpack import from_dlpack
+
+def torch_to_cupy(x):
+    """
+    Convert a PyTorch tensor to a CuPy array.
+    """
+    return fromDlpack(to_dlpack(x))
+
+def cupy_to_torch(x):
+    """
+    Convert a CuPy array to a PyTorch tensor.
+    """
+    return from_dlpack(toDlpack(x))
 
 def prepare(A, transpose, blocking=True, level_info=True):
     import cupy as _cupy
