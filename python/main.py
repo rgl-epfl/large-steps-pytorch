@@ -46,8 +46,13 @@ def optimize_shape(filepath, params):
 
     # Load reference shape
     v_ref = scene_params["mesh-target"]["vertices"]
-    n_ref = scene_params["mesh-target"]["normals"]
     f_ref = scene_params["mesh-target"]["faces"]
+    if "normals" in scene_params["mesh-target"].keys():
+        n_ref = scene_params["mesh-target"]["normals"]
+    else:
+        face_normals = compute_face_normals(v_ref, f_ref)
+        n_ref = compute_vertex_normals(v_ref, f_ref, face_normals)
+
     # Load source shape
     v_src = scene_params["mesh-source"]["vertices"]
     f_src = scene_params["mesh-source"]["faces"]

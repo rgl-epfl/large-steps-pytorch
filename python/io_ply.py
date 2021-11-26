@@ -124,12 +124,11 @@ def read_ply(filename):
         bottom = 0 if mesh_size is None else mesh_size
 
         names = [x[0] for x in dtypes["vertex"]]
-
-        data["vertices"] = pd.read_csv(filename, sep=" ", header=None, engine="python",
+        vertex_data = pd.read_csv(filename, sep=" ", header=None, engine="python",
                                      skiprows=top, skipfooter=bottom, usecols=names, names=names)
 
-        for n, col in enumerate(data["vertices"].columns):
-            data["vertices"][col] = data["vertices"][col].astype(
+        for n, col in enumerate(vertex_data.columns):
+            vertex_data[col] = vertex_data[col].astype(
                 dtypes["vertex"][n][1])
 
         if mesh_size :
@@ -147,7 +146,9 @@ def read_ply(filename):
                     dtypes["face"][n + 1][1])
 
         # Convert to PyTorch array
-        data["vertices"] = torch.tensor(data["vertices"].to_numpy(), device='cuda')
+        data["vertices"] = torch.tensor(vertex_data[["x", "y", "z"]].values, device='cuda')
+        if "nx" in vertex_data.columns:
+            data["normals"] = torch.tensor(vertex_data[["nx", "ny", "nz"]].values, device='cuda')
         data["faces"] = torch.tensor(data["faces"].to_numpy(), device='cuda')
 
     else:
@@ -157,7 +158,8 @@ def read_ply(filename):
             if ext != sys_byteorder:
                 points_np = points_np.byteswap().newbyteorder()
             data["vertices"] = torch.tensor(np.stack((points_np["x"],points_np["y"],points_np["z"]), axis=1), device='cuda')
-            data["normals"] = torch.tensor(np.stack((points_np["nx"],points_np["ny"],points_np["nz"]), axis=1), device='cuda')
+            if "nx" in points_np.dtype.fields.keys():
+                data["normals"] = torch.tensor(np.stack((points_np["nx"],points_np["ny"],points_np["nz"]), axis=1), device='cuda')
             if mesh_size:
                 mesh_np = np.fromfile(ply, dtype=dtypes["face"], count=mesh_size)
                 if ext != sys_byteorder:
@@ -169,7 +171,7 @@ def read_ply(filename):
 
     return data
 
-def write_ply(filename, V, F, VC = None):
+def write_ply(filename, v, f, n=None, vc = None, ascii=False):
     """
     Write a mesh as PLY with vertex colors.
 
@@ -177,43 +179,92 @@ def write_ply(filename, V, F, VC = None):
     ----------
     filename : str
         Path to which to save the mesh.
-    V : numpy.ndarray
+    v : numpy.ndarray
         Vertex positions.
-    F : numpy.ndarray
+    f : numpy.ndarray
         Faces.
-    VC : numpy.ndarray
-        Vertex colors (optional).
+    n : numpy.ndarray
+        Vertex normals (optional).
+    vc : numpy.ndarray
+        Vertex colors (optional). Expects colors as floats in [0,1]
+    ascii : bool
+        Whether we write a text or binary PLY file (defaults to binary as it is more efficient)
     """
-    if VC is not None:
-        color = (VC*255).astype(np.uint8)
-    f = open(filename, 'w')
+    if vc is not None:
+        color = (vc*255).astype(np.uint8)
     # headers
     string = 'ply\n'
-    string = string + 'format ascii 1.0\n'
-    string = string + 'element vertex ' + str(V.shape[0]) + '\n'
+    if ascii:
+        string = string + 'format ascii 1.0\n'
+    else:
+        string = string + 'format binary_' + sys.byteorder + '_endian 1.0\n'
+
+    string = string + 'element vertex ' + str(v.shape[0]) + '\n'
     string = string + 'property double x\n'
     string = string + 'property double y\n'
     string = string + 'property double z\n'
-    if (VC is not None and VC.shape[0] == V.shape[0]):
+    if n is not None and n.shape[0] == v.shape[0]:
+        string = string + 'property double nx\n'
+        string = string + 'property double ny\n'
+        string = string + 'property double nz\n'
+
+    if (vc is not None and vc.shape[0] == v.shape[0]):
         string = string + 'property uchar red\n'
         string = string + 'property uchar green\n'
         string = string + 'property uchar blue\n'
-        string = string + 'property uchar alpha\n'
 
     # end of header
-    string = string + 'element face ' + str(F.shape[0]) + '\n'
+    string = string + 'element face ' + str(f.shape[0]) + '\n'
     string = string + 'property list int int vertex_indices\n'
     string = string + 'end_header\n'
-    f.write(string)
-    # write vertices
-    for ii in range(V.shape[0]):
-        string = '%f %f %f ' % (V[ii,0], V[ii,1], V[ii,2])
-        if (VC is not None and VC.shape[0] == V.shape[0]):
-            string = string + '%03d %03d %03d %03d\n' % (color[ii,0], color[ii,1], color[ii,2], 255)
-        else:
-            string = string + '\n'
-        f.write(string)
-    for ii in range(F.shape[0]):
-        string = '%d %d %d %d\n' % (3, F[ii,0], F[ii,1], F[ii,2])
-        f.write(string)
-    f.close()
+    with open(filename, 'w') as file:
+        file.write(string)
+        if ascii:
+            # write vertices
+            for ii in range(v.shape[0]):
+                string = f"{v[ii,0]} {v[ii,1]} {v[ii,2]}"
+                if n is not None and n.shape[0] == v.shape[0]:
+                    string = string + f" {n[ii,0]} {n[ii,1]} {n[ii,2]}"
+                if (vc is not None and vc.shape[0] == v.shape[0]):
+                    string = string + f" {color[ii,0]:03d} {color[ii,1]:03d} {color[ii,2]:03d}\n"
+                else:
+                    string = string + '\n'
+                file.write(string)
+            # write faces
+            for ii in range(f.shape[0]):
+                string = f"3 {f[ii,0]} {f[ii,1]} {f[ii,2]} \n"
+                file.write(string)
+
+    if not ascii:
+        # Write binary PLY data
+        with open(filename, 'ab') as file:
+            if vc is None:
+                if n is not None:
+                    vertex_data = np.hstack((v, n))
+                    file.write(vertex_data.astype(np.float64).tobytes())
+                else:
+                    file.write(v.astype(np.float64).tobytes())
+            else:
+                if n is not None:
+                    vertex_data = np.zeros(v.shape[0], dtype='double,double,double,double,double,double,uint8,uint8,uint8')
+                    vertex_data['f0'] = v[:,0].astype(np.float64)
+                    vertex_data['f1'] = v[:,1].astype(np.float64)
+                    vertex_data['f2'] = v[:,2].astype(np.float64)
+                    vertex_data['f3'] = n[:,0].astype(np.float64)
+                    vertex_data['f4'] = n[:,1].astype(np.float64)
+                    vertex_data['f5'] = n[:,2].astype(np.float64)
+                    vertex_data['f6'] = color[:,0]
+                    vertex_data['f7'] = color[:,1]
+                    vertex_data['f8'] = color[:,2]
+                else:
+                    vertex_data = np.zeros(v.shape[0], dtype='double,double,double,uint8,uint8,uint8')
+                    vertex_data['f0'] = v[:,0].astype(np.float64)
+                    vertex_data['f1'] = v[:,1].astype(np.float64)
+                    vertex_data['f2'] = v[:,2].astype(np.float64)
+                    vertex_data['f3'] = color[:,0]
+                    vertex_data['f4'] = color[:,1]
+                    vertex_data['f5'] = color[:,2]
+                file.write(vertex_data.tobytes())
+            # Write faces
+            faces = np.hstack((3*np.ones((len(f), 1)), f)).astype(np.int32)
+            file.write(faces.tobytes())
