@@ -31,7 +31,7 @@ remesh = [-1,250, -1,-1]
 for j, method in enumerate(["ours", "remesh", "reg", "naive"]):
     torch.cuda.empty_cache()
     params["reg"] = reg[j]
-    params["lr"] = lr[j]
+    params["step_size"] = lr[j]
     params["optimizer"] = opt[j]
     params["smooth"] = smooth[j]
     params["remesh"] = remesh[j]

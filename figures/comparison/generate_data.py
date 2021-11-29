@@ -42,7 +42,7 @@ for i, scene in enumerate(scenes):
             params["reg"] = 0
             params["smooth"] = True
             params["optimizer"] = AdamUniform
-            params["lr"] = step_sizes[i]
+            params["step_size"] = step_sizes[i]
         else:
             if j==1:
                 params["reg"] = regs[i]
@@ -52,7 +52,7 @@ for i, scene in enumerate(scenes):
                 params["bilaplacian"] = True
             params["smooth"] = False
             params["optimizer"] = torch.optim.Adam
-            params["lr"] = 1e-2
+            params["step_size"] = 1e-2
 
         torch.cuda.empty_cache()
         out = optimize_shape(filename, params)
