@@ -221,10 +221,7 @@ def optimize_shape(filepath, params):
             else:
                 pbar.update(min(opt_time, (t-t0)) - pbar.n)
 
-
     result_dict["losses"] = np.array(result_dict["losses"])
-    result_dict["vert_steps"].append(v_opt.detach().cpu().numpy().copy())
-    result_dict["tr_steps"].append(tr.detach().cpu().numpy().copy())
     return result_dict
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ def remove_duplicates(v, f):
 
 def average_edge_length(verts, faces):
     """
-    Compute the average length of alls edges in a given mesh.
+    Compute the average length of all edges in a given mesh.
 
     Parameters
     ----------
