@@ -16,7 +16,7 @@ if not os.path.isdir(output_dir):
 scene_name = "reg_fail"
 filename = os.path.join(SCENES_DIR, scene_name, scene_name + ".xml")
 
-reg_weights = [1, 400, 1e3]
+reg_weights = [1, 400, 10000]
 df = pd.DataFrame(data={"weight":reg_weights})
 df.to_csv(os.path.join(output_dir, f"weights.csv"))
 
@@ -26,7 +26,7 @@ df.to_csv(os.path.join(output_dir, f"save_steps.csv"))
 
 params = {
     "steps" : 25001,
-   "step_size" : 5e-3,
+    "step_size" : 5e-3,
     "shading": False,
     "boost" : 3,
     "smooth" : True,
@@ -54,7 +54,6 @@ df.to_csv(os.path.join(output_dir, f"loss_smooth.csv"))
 
 params["smooth"] = False
 params["optimizer"] = Adam
-params["step_size"] = 1e-4
 for i, w in enumerate(reg_weights):
     params["reg"] = w
     # Optimize with regularization
