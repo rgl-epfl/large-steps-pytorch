@@ -18,14 +18,14 @@ if not os.path.isdir(output_dir):
     os.makedirs(output_dir)
 
 params = {
-    "time": 1,
+    "time": 2,
     "loss": "l1",
     "boost" : 3,
     "optimizer": AdamUniform
     }
 
 lambdas = [0., 0.3333, 1., 3., 19., 49., 99., 999.]
-step_sizes = [0.002, 0.0026667, 0.004, 0.008, 0.04, 0.1, 0.2, 2.]
+step_sizes = [0.001, 0.0013, 0.002, 0.004, 0.02, 0.05, 0.1, 1.]
 
 df = pd.DataFrame(data={"lambda": lambdas})
 df.to_csv(os.path.join(output_dir, "lambdas.csv"))
@@ -35,6 +35,7 @@ for i, lambda_ in enumerate(lambdas):
 
     out = optimize_shape(filename, params)
     v = out["vert_steps"][-1] + out["tr_steps"][-1]
+    print(len(out["vert_steps"]))
     f = out["f"][-1]
     # Write the resulting mesh
     write_ply(os.path.join(output_dir, f"res_{i:02d}.ply"), v, f)
