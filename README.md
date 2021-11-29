@@ -45,15 +45,57 @@ based) pipeline, you can simply install it with:
 pip install largesteps
 ```
 
-Otherwise, you can clone this repo and install the module locally:
+This will install the `largesteps` module. This only contains the
+parameterization logic implemented as a PyTorch custom operator. See the
+[tutorial](Tutorial.ipynb) for an example use case.
+
+Otherwise, if you want to reproduce the experiments from the paper, you can
+clone this repo and install the module locally:
 ```bash
 git clone --recursive git@github.com:rgl-epfl/large-steps-pytorch.git
 cd large-steps-pytorch
 pip install .
 ```
 
-This will install the `largesteps` module. This only
-contains the parameterization logic implemented as a PyTorch custom op:
+## Dependencies
+
+This repository depends on PyTorch and nvdiffrast. Please follow instructions on
+the PyTorch [website](https://pytorch.org/get-started/locally/) to install it.
+To install `nvdiffrast` and the Botsch-Kobbelt remesher, which are provided as
+submodules, please run the `setup_dependencies.sh` script.
+
+To run the experiments, also run:
+```bash
+pip install tqdm matplotlib numpy pandas seaborn
+```
+
+## Running the experiments
+
+You can then run the experiments in the `figures` folder, in which each
+subfolder corresponds to a figure in the paper, and contains two files:
+- `generate_data.py`: contatins the script to run the experiment and write the
+  output to the directory specified in `scripts/constants.py`
+- `figure.ipynb`: contains the script generating the figure, assuming
+  `generate_data.py` has been run before and the output written to the directory
+  specified in `scripts/constants.py`
+
+We provide the scripts for the following figures:
+- Fig. 1 -> `teaser`
+- Fig. 3 -> `multiscale`
+- Fig. 5 -> `remeshing`
+- Fig. 6 -> `reg_fail`
+- Fig. 7 -> `comparison`
+- Fig. 8 -> `viewpoints`
+- Fig. 9 -> `influence`
+
+:warning: Several experiments are equal-time comparisons ran on a Linux
+Ryzen 3990X workstation with a TITAN RTX graphics card. you may have to change
+the timings to reproduce the results on a different machine.
+
+## Repository structure
+
+The `largesteps` folder contains the parameterization module made available via
+`pip`. It contains:
 - `geometry.py`: contains the laplacian matrix computation.
 - `optimize.py`: contains the `AdamUniform` optimizer implementation
 - `parameterize.py`: contains the actual parameterization code, implemented as a
@@ -71,37 +113,29 @@ Other functions used for the experiments are included in the `scripts` folder:
 - `preamble.py`: utility scipt to a import redundant modules for the figures
 - `render.py`: contains the rendering logic, using `nvdiffrast`
 
-See the [tutorial](Tutorial.ipynb) for an example use case.
-
-You can also run the experiments in the `figures` folder, in which each subfolder corresponds to a figure in the paper, and
-contains two files:
-- `generate_data.py`: contatins the script to run the experiment and write the
-  output to the directory specified in `scripts/constants.py`
-- `figure.ipynb`: contains the script generating the figure, assuming
-  `generate_data.py` has been run before and the output written to the directory
-  specified in `scripts/constants.py`
-
-We provide the scripts for the following figures:
-- Fig. 1 -> `teaser`
-- Fig. 3 -> `multiscale`
-- Fig. 5 -> `remeshing`
-- Fig. 6 -> `reg_fail`
-- Fig. 7 -> `comparison`
-- Fig. 8 -> `viewpoints`
-- Fig. 9 -> `influence`
-
-
-## Dependencies
-
-This repository depends on PyTorch and nvdiffrast. Please follow instructions on
-the PyTorch website to install it. To install `nvdiffrast` and the
-Botsch-Kobbelt remesher, which are provided as submodules, please run the
-`setup_dependencies.sh` script.
 ## License
-This code is provided under a BSD-style license that can be found in the LICENSE
-file. By using, distributing, or contributing to this project, you agree to the
-terms and conditions of this license.
+This code is provided under a 3-clause BSD license that can be found in the
+LICENSE file. By using, distributing, or contributing to this project, you agree
+to the terms and conditions of this license.
 
+
+## Citation
+
+If you use this code for academic research, please cite our method using the following BibTeX entry:
+
+```bibtex
+@article{Nicolet2021Large,
+    author = "Nicolet, Baptiste and Jacobson, Alec and Jakob, Wenzel",
+    title = "Large Steps in Inverse Rendering of Geometry",
+    journal = "ACM Transactions on Graphics (Proceedings of SIGGRAPH Asia)",
+    volume = "40",
+    number = "6",
+    year = "2021",
+    month = dec,
+    doi = "10.1145/3478513.3480501",
+    url = "https://rgl.epfl.ch/publications/Nicolet2021Large"
+}
+```
 ## Acknowledgments
 The authors would like to thank Delio Vicini for early discussions about this
 project, Silvia Sellán for sharing her remeshing implementation and help for the
