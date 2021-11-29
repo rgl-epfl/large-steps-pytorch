@@ -7,7 +7,7 @@ setup(
     url='https://github.com/rgl-epfl/large-steps-pytorch',
     author='Baptiste Nicolet',
     author_email='baptiste.nicolet@epfl.ch',
-    license='BSD 2-clause',
+    license='BSD',
     packages=['largesteps'],
     install_requires=['numpy',
                         'cupy',
