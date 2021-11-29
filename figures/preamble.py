@@ -58,7 +58,7 @@ def blender_render(mesh_path, out_path, collection, viewpoint, res=100, area=Fal
         Wireframe thickness
     """
     args = [BLENDER_EXEC, "-b" , BLEND_SCENE, "--python",
-            os.path.join(PYTHON_DIR, "blender_render.py"), "--", "-i", mesh_path,
+            os.path.join(os.path.dirname(__file__), "blender_render.py"), "--", "-i", mesh_path,
             "-o", out_path, "-c", f"{collection}", "-v", f"{viewpoint}", "-r", f"{res}", "-t", f"{t}"]
     if baseline:
         args.append("--baseline")
