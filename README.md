@@ -90,6 +90,13 @@ We provide the scripts for the following figures:
 - Fig. 8 -> `viewpoints`
 - Fig. 9 -> `influence`
 
+
+## Dependencies
+
+This repository depends on PyTorch and nvdiffrast. Please follow instructions on
+the PyTorch website to install it. To install `nvdiffrast` and the
+Botsch-Kobbelt remesher, which are provided as submodules, please run the
+`setup_dependencies.sh` script.
 ## License
 This code is provided under a BSD-style license that can be found in the LICENSE
 file. By using, distributing, or contributing to this project, you agree to the

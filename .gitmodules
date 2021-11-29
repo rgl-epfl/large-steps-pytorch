@@ -1,3 +1,6 @@
 [submodule "botsch-kobbelt-remesher-libigl"]
 	path = botsch-kobbelt-remesher-libigl
 	url = git@github.com:sgsellan/botsch-kobbelt-remesher-libigl.git
+[submodule "nvdiffrast"]
+	path = nvdiffrast
+	url = git@github.com:NVlabs/nvdiffrast.git
