@@ -152,7 +152,7 @@ def optimize_shape(filepath, params):
                     h = (average_edge_length(v_unique, f_unique)).cpu().numpy()*0.5
 
                     # Run 5 iterations of the Botsch-Kobbelt remeshing algorithm
-                    v_new, f_new = remesh_botsch(v_cpu.astype(np.double), f_cpu.astype(np.int32), 5, h)
+                    v_new, f_new = remesh_botsch(v_cpu.astype(np.double), f_cpu.astype(np.int32), 5, h, True)
 
                     v_src = torch.from_numpy(v_new).cuda().float().contiguous()
                     f_src = torch.from_numpy(f_new).cuda().contiguous()
