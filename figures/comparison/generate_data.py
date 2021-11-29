@@ -5,12 +5,11 @@ import pandas as pd
 import torch
 from tqdm import trange
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../python/'))
-
-from main import optimize_shape
-from constants import *
-from optimize import AdamUniform
-from io_ply import write_ply
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from scripts.main import optimize_shape
+from scripts.constants import *
+from scripts.io_ply import write_ply
+from largesteps.optimize import AdamUniform
 
 try:
     from igl import hausdorff

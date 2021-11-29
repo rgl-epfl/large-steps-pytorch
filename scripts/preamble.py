@@ -3,10 +3,7 @@ import subprocess
 import sys
 import os
 
-PYTHON_DIR = os.path.join(os.path.dirname(__file__), "../python")
-sys.path.append(PYTHON_DIR)
-
-from constants import *
+from scripts.constants import *
 
 import seaborn as sns
 import pandas as pd

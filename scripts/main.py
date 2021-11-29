@@ -5,12 +5,13 @@ from tqdm import tqdm
 import numpy as np
 import sys
 
-from optimize import AdamUniform
-from render import NVDRenderer
-from geometry import *
-from parameterize import to_differential, from_differential
-from load_xml import load_scene
-from constants import REMESH_DIR
+from largesteps.optimize import AdamUniform
+from largesteps.geometry import compute_matrix, laplacian_uniform
+from largesteps.parameterize import to_differential, from_differential
+from scripts.render import NVDRenderer
+from scripts.load_xml import load_scene
+from scripts.constants import REMESH_DIR
+from scripts.geometry import remove_duplicates, compute_face_normals, compute_vertex_normals, average_edge_length
 sys.path.append(REMESH_DIR)
 from pyremesh import remesh_botsch
 

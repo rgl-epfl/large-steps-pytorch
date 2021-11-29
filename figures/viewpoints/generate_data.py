@@ -2,12 +2,12 @@ import sys
 import os
 import pandas as pd
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../python/'))
-from main import optimize_shape
-from constants import *
-from optimize import AdamUniform
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from scripts.main import optimize_shape
+from scripts.constants import *
+from scripts.io_ply import write_ply
+from largesteps.optimize import AdamUniform
 import torch
-from io_ply import write_ply
 
 output_dir = os.path.join(OUTPUT_DIR, os.path.basename(os.path.dirname(__file__)))
 if not os.path.isdir(output_dir):

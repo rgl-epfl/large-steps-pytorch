@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 import os
 import torch
 import numpy as np
-from io_ply import read_ply
+from scripts.io_ply import read_ply
 import imageio
 imageio.plugins.freeimage.download()
 

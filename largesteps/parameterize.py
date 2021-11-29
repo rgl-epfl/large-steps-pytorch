@@ -1,6 +1,4 @@
-import torch
-from geometry import laplacian_uniform
-from solvers import CholeskySolver, ConjugateGradientSolver, solve
+from largesteps.solvers import CholeskySolver, ConjugateGradientSolver, solve
 from weakref import WeakKeyDictionary
 
 # Cache for the system solvers
