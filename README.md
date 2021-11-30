@@ -59,14 +59,14 @@ pip install .
 
 ## Dependencies
 
-This repository depends on PyTorch and nvdiffrast. Please follow instructions on
+The experiments in this repository depend on PyTorch. Please follow instructions on
 the PyTorch [website](https://pytorch.org/get-started/locally/) to install it.
 To install `nvdiffrast` and the Botsch-Kobbelt remesher, which are provided as
 submodules, please run the `setup_dependencies.sh` script.
 
-To run the experiments, also run:
+To install the other dependencies needed to run the experiments, also run:
 ```bash
-pip install tqdm matplotlib numpy pandas seaborn
+pip install -r requirements.txt
 ```
 
 ## Running the experiments
