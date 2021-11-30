@@ -1,9 +1,20 @@
 from largesteps.solvers import CholeskySolver, ConjugateGradientSolver, solve
-from weakref import WeakKeyDictionary
+import weakref
 
 # Cache for the system solvers
-#_cache = WeakKeyDictionary()
 _cache = {}
+
+def cache_put(key, value, A):
+    # Called when 'A' is garbage collected
+    def cleanup_callback(wr):
+        del _cache[key]
+
+    wr = weakref.ref(
+        A,
+        cleanup_callback
+    )
+
+    _cache[key] = (value, wr)
 
 def to_differential(L, v):
     return L @ v
@@ -24,7 +35,8 @@ def from_differential(L, u, method='Cholesky'):
     method : {'Cholesky', 'CG'}
         Solver to use.
     """
-    if L not in _cache.keys():
+    key = id(L)
+    if key not in _cache.keys():
         if method == 'Cholesky':
             solver = CholeskySolver(L)
         elif method == 'CG':
@@ -32,9 +44,9 @@ def from_differential(L, u, method='Cholesky'):
         else:
             raise ValueError(f"Unknown solver type '{method}'.")
 
-        _cache[L] = solver
+        cache_put(key, solver, L)
     else:
-        solver = _cache[L]
+        solver = _cache[key][0]
         # TODO: make sure that the method hasn't changed here
 
     return solve(solver, u)
