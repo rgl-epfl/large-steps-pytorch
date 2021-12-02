@@ -13,7 +13,11 @@ sudo apt-get update && apt-get install -y --no-install-recommends \
     libegl1-mesa-dev \
     libgles2-mesa-dev \
     cmake \
-    curl
+    curl \
+    dvipng \
+    texlive-latex-extra \
+    texlive-fonts-recommended \
+    cm-super
 
 # Make sure submodules are checked out
 git submodule update --init --recursive
