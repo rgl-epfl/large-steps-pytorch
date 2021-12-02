@@ -69,6 +69,17 @@ To install the other dependencies needed to run the experiments, also run:
 pip install -r requirements.txt
 ```
 
+:warning: On Linux, `nvdiffrast` requires using `g++` to compile some PyTorch
+extensions, make sure this is your default compiler:
+
+```bash
+export CC=gcc && CXX=g++
+```
+
+Rendering the figures will also require installing
+[blender](https://www.blender.org/download/). You can specify the name of the
+blender executable you wish to use in `scripts/constants.py`
+
 ## Running the experiments
 
 You can then run the experiments in the `figures` folder, in which each
