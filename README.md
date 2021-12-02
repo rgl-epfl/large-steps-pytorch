@@ -32,6 +32,40 @@
 <br />
 <br />
 
+
+<!-- TABLE OF CONTENTS -->
+<details open="open" style='padding: 10px; border-radius:5px 30px 30px 5px; border-style: solid; border-width: 1px;'>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#how-to-use-this-repo">How to use this repo?</a>
+    </li>
+    <li>
+      <a href="#dependencies">Dependencies</a>
+      <ul>
+        <li><a href="#downloading-the-scenes">Downloading the scenes</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#running-the-experiments">Running the experiments</a>
+    </li>
+    <li>
+      <a href="#repository-structure">Repository structure</a>
+    </li>
+    <li>
+      <a href="#license">License</a>
+    </li>
+    <li>
+      <a href="#citation">Citation</a>
+    </li>
+    <li>
+      <a href="#acknowledgments">Acknowledgments</a>
+    </li>
+  </ol>
+</details>
+<br />
+<br />
+
 ## How to use this repo?
 
 This repository contains both the operators needed to use our parameterization
