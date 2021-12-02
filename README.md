@@ -80,6 +80,12 @@ Rendering the figures will also require installing
 [blender](https://www.blender.org/download/). You can specify the name of the
 blender executable you wish to use in `scripts/constants.py`
 
+### Downloading the scenes
+
+The scenes for the experiments can be downloaded
+[here](https://rgl.s3.eu-central-1.amazonaws.com/media/papers/Nicolet2021Large.zip).
+Please extract the archive at the toplevel of this repository.
+
 ## Running the experiments
 
 You can then run the experiments in the `figures` folder, in which each
