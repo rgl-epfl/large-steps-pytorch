@@ -19,9 +19,10 @@ filename = os.path.join(folder, scene_name, scene_name + ".xml")
 params = {
     "time": 1,
     "boost" : 3,
+    "step_size": 1e-2,
     "loss": "l1",
     "smooth" : True,
-    "lambda": 19,
+    "alpha": 0.95,
     }
 
 remesh = [-1, -1, 750, 0]
@@ -33,12 +34,11 @@ for i, method in enumerate(["reg", "base", "remesh_middle", "remesh_start"]):
         params["smooth"] = False
         params["optimizer"] = Adam
         params["reg"] = 0.16
-        params["step_size"] = 1e-2
     else:
         params["smooth"] = True
         params["optimizer"] = AdamUniform
         params["reg"] = 0
-        params["step_size"] = 1e-1
+
     params["remesh"] = remesh[i]
     out = optimize_shape(filename, params)
     v = out["vert_steps"][-1] + out["tr_steps"][-1]

@@ -5,4 +5,4 @@ OUTPUT_DIR = os.path.realpath(os.path.join(ROOT_DIR, "output")) # Change this if
 SCENES_DIR = os.path.realpath(os.path.join(ROOT_DIR, "scenes"))
 REMESH_DIR = os.path.join(ROOT_DIR, "botsch-kobbelt-remesher-libigl/build")
 BLEND_SCENE = os.path.join(SCENES_DIR, "render.blend")
-BLENDER_EXEC = "blender" # Change this if you have a different blender installation
+BLENDER_EXEC = "blender2.8" # Change this if you have a different blender installation

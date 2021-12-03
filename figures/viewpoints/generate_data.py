@@ -20,13 +20,13 @@ pd.DataFrame(data=num_viewpoints).to_csv(os.path.join(output_dir, "viewpoints.cs
 params = {
     "time" : 0.75,
     "loss": "l1",
+    "step_size": 1e-2,
     "boost" : 3,
-    "lambda": 19,
+    "alpha": 0.95,
     }
 
 opt = [AdamUniform, torch.optim.Adam]
 reg = [0, 2.1]
-step_sizes = [2e-1, 1e-2]
 
 for i, n in enumerate(num_viewpoints):
     scene_name = f"bunny_{n:02d}"
@@ -36,7 +36,6 @@ for i, n in enumerate(num_viewpoints):
         params["smooth"] = (reg[j]==0)
         params["reg"] = reg[j]
         params["optimizer"] = opt[j]
-        params["step_size"] = step_sizes[j]
 
         out = optimize_shape(filename, params)
         v = out["vert_steps"][-1] + out["tr_steps"][-1]

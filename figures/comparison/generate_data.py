@@ -19,7 +19,7 @@ except ModuleNotFoundError:
 output_dir = os.path.join(OUTPUT_DIR, os.path.basename(os.path.dirname(__file__)))
 
 scenes = ["suzanne", "cranium", "bob", "bunny", "tshirt", "planck"]
-step_sizes = [0.04, 0.1 , 0.06, 0.2 , 0.06, 0.06]
+step_sizes = [2e-3, 5e-3, 3e-3, 1e-2, 3e-3, 3e-3]
 durations = [0.5, 1, 0.5, 0.75, 0.2, 0.5]
 regs = [2.8, 0.21, 0.67, 3.8, 12, 3.8]
 regs_bi = [3.8, 0.16, 0.37, 2.1, 12, 5]
@@ -27,7 +27,7 @@ regs_bi = [3.8, 0.16, 0.37, 2.1, 12, 5]
 params = {
     "boost": 3,
     "loss": "l1",
-    "lambda": 19,
+    "alpha": 0.95,
 }
 
 for i, scene in enumerate(scenes):

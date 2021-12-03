@@ -93,9 +93,14 @@ def laplacian_uniform(verts, faces):
     # correct diagonal
     return torch.sparse_coo_tensor(idx, values, (V,V)).coalesce()
 
-def compute_matrix(verts, faces, lambda_, cotan=False):
+def compute_matrix(verts, faces, lambda_, alpha=None, cotan=False):
     """
-    Build the system matrix I + lambda_*L
+    Build the parameterization matrix.
+
+    If alpha is defined, then we compute it as (1-alpha)*I + alpha*L otherwise
+    as I + lambda*L as in the paper. The first definition can be slightly more
+    convenient as it the scale of the resulting matrix doesn't change much
+    depending on alpha.
 
     Parameters
     ----------
@@ -103,18 +108,26 @@ def compute_matrix(verts, faces, lambda_, cotan=False):
         Vertex positions
     faces : torch.Tensor
         Triangle faces
-    lanbda_ : float
-        Hyper parameter of our method
+    lambda_ : float
+        Hyperparameter lambda of our method, used to compute the
+        parameterization matrix as (I + lambda_ * L)
+    alpha : float in [0, 1[
+        Alternative hyperparameter, used to compute the parameterization matrix
+        as ((1-alpha) * I + alpha * L)
     cotan : bool
         Compute the cotangent laplacian. Otherwise, compute the combinatorial one
     """
     if cotan:
         L = laplacian_cot(verts, faces)
-        #TODO: maybe the massmatrix is also needed here
     else:
         L = laplacian_uniform(verts, faces)
 
     idx = torch.arange(verts.shape[0], dtype=torch.long, device='cuda')
     eye = torch.sparse_coo_tensor(torch.stack((idx, idx), dim=0), torch.ones(verts.shape[0], dtype=torch.float, device='cuda'), (verts.shape[0], verts.shape[0]))
-    M = torch.add(eye, lambda_*L)
+    if alpha is None:
+        M = torch.add(eye, lambda_*L) # M = I + lambda_ * L
+    else:
+        if alpha < 0.0 or alpha >= 1.0:
+            raise ValueError(f"Invalid value for alpha: {alpha} : it should take values between 0 (included) and 1 (excluded)")
+        M = torch.add((1-alpha)*eye, alpha*L) # M = (1-alpha) * I + alpha * L
     return M.coalesce()

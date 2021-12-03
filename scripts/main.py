@@ -35,7 +35,8 @@ def optimize_shape(filepath, params):
     shading = params.get("shading", True) # Use shading, otherwise render silhouettes
     reg = params.get("reg", 0.0) # Regularization weight
     solver = params.get("solver", 'Cholesky') # Solver to use
-    lambda_ = params.get("lambda", 1.0) # Hyperparameter lambda of our method, used to compute the matrix (I + lambda_*L)
+    lambda_ = params.get("lambda", 1.0) # Hyperparameter lambda of our method, used to compute the parameterization matrix as (I + lambda_ * L)
+    alpha = params.get("alpha", None) # Alternative hyperparameter, used to compute the parameterization matrix as ((1-alpha) * I + alpha * L)
     remesh = params.get("remesh", -1) # Time step(s) at which to remesh
     optimizer = params.get("optimizer", AdamUniform) # Which optimizer to use
     use_tr = params.get("use_tr", True) # Optimize a global translation at the same time
@@ -74,10 +75,10 @@ def optimize_shape(filepath, params):
 
     if smooth:
         # Compute the system matrix and parameterize
-        M = compute_matrix(v_unique, f_unique, lambda_)
+        M = compute_matrix(v_unique, f_unique, lambda_=lambda_, alpha=alpha)
         u_unique = to_differential(M, v_unique)
 
-    def initialize_optimizer(u, v, tr, lambda_, step_size):
+    def initialize_optimizer(u, v, tr, step_size):
         """
         Initialize the optimizer
 
@@ -89,9 +90,7 @@ def optimize_shape(filepath, params):
             Cartesian coordinates to optimize if u is None
         - tr : torch.Tensor
             Global translation to optimize if not None
-        - lambda_ : float
-            Hyper parameter of our method
-        - step_size ; float
+        - step_size : float
             Step size
 
         Returns
@@ -101,23 +100,17 @@ def optimize_shape(filepath, params):
         opt_params = []
         if tr is not None:
             tr.requires_grad = True
-            tr_params = {'params': tr}
-            if u is not None:
-                # The results in the paper were generated using a slightly different
-                # implementation of the system matrix than this one, so we need to
-                # scale the step size by this factor to match the results exactly.
-                tr_params['lr'] = step_size / (1 + lambda_)
-            opt_params.append(tr_params)
+            opt_params.append(tr)
         if u is not None:
             u.requires_grad = True
-            opt_params.append({'params': u})
+            opt_params.append(u)
         else:
             v.requires_grad = True
-            opt_params.append({'params': v})
+            opt_params.append(v)
 
         return optimizer(opt_params, lr=step_size)
 
-    opt = initialize_optimizer(u_unique if smooth else None, v_unique, tr if use_tr else None, lambda_, step_size)
+    opt = initialize_optimizer(u_unique if smooth else None, v_unique, tr if use_tr else None, step_size)
 
     # Set values for time and step count
     if opt_time > 0:
@@ -165,11 +158,11 @@ def optimize_shape(filepath, params):
 
                     if smooth:
                         # Compute the system matrix and parameterize
-                        M = compute_matrix(v_unique, f_unique, lambda_)
+                        M = compute_matrix(v_unique, f_unique, lambda_=lambda_, alpha=alpha)
                         u_unique = to_differential(M, v_unique)
 
                     step_size *= 0.8
-                    opt = initialize_optimizer(u_unique if smooth else None, v_unique, tr if use_tr else None, lambda_, step_size)
+                    opt = initialize_optimizer(u_unique if smooth else None, v_unique, tr if use_tr else None, step_size)
 
                 # Get next remesh iteration if any
                 if type(remesh) == list and len(remesh) > 0:

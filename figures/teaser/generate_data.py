@@ -18,15 +18,15 @@ filename = os.path.join(SCENES_DIR, scene_name, scene_name + ".xml")
 params = {
     "time": 2,
     "boost": 3,
-    "lambda": 49,
+    "alpha": 0.98,
     "loss": "l1"
 }
 
 reg = [0,0,16,0]
-lr = [1e-1, 1e-1, 1e-2, 1e-2]
+lr = [2e-3, 2e-3, 1e-2, 1e-2]
 opt = [AdamUniform, AdamUniform, torch.optim.Adam, torch.optim.Adam]
 smooth = [True, True, False, False]
-remesh = [-1,250, -1,-1]
+remesh = [-1, 250, -1,-1]
 
 for j, method in enumerate(["ours", "remesh", "reg", "naive"]):
     torch.cuda.empty_cache()

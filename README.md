@@ -39,6 +39,10 @@
   <ol>
     <li>
       <a href="#how-to-use-this-repo">How to use this repo?</a>
+      <ul>
+        <li><a href="#installing">Installing</a></li>
+        <li><a href="#parameterization">Parameterization</a></li>
+      </ul>
     </li>
     <li>
       <a href="#dependencies">Dependencies</a>
@@ -72,6 +76,8 @@ This repository contains both the operators needed to use our parameterization
 of vertex positions of meshes as well as the code for the experiments we show in
 the paper.
 
+### Installing
+
 If you are only interested in using our parameterization in an existing (PyTorch
 based) pipeline, you can simply install it with:
 
@@ -90,6 +96,40 @@ git clone --recursive git@github.com:rgl-epfl/large-steps-pytorch.git
 cd large-steps-pytorch
 pip install .
 ```
+
+### Parameterization
+
+In a nutshell, our parameterization can be obtained in just a few lines:
+
+```python
+# Given tensors v and f containing vertex positions and faces
+from largesteps.geometry import laplacian_uniform, compute_matrix
+from largesteps.parameterize import to_differential, from_differential
+L = laplacian_uniform(v, f)
+M = compute_matrix(L, lambda_=10)
+u = to_differential(v, M)
+```
+
+`compute_matrix` returns the parameterization matrix **I** + λ**L**. This
+function takes another parameter, `alpha`, which leads to a slightly different,
+but equivalent, formula for the matrix: (1-α)**I** + α**L**, with α ∈ [0,1[:
+
+```python
+M = compute_matrix(L, alpha=0.9)
+```
+
+Then, vertex coordinates can be retrieved as:
+
+```python
+v = from_differential(u, M)
+```
+
+This will in practice perform a cache lookup for a solver associated to the
+matrix M (and instantiate one if not found) and solve the linear system
+$\mathbf{Mv} = \mathbf{u}$. Further calls to `from_differential` with the same
+matrix will use the solver stored in the cache. Since this operation is
+implemented as a differentiable PyTorch operation, there is nothing more to be
+done to optimize this parameterization.
 
 ## Dependencies
 
