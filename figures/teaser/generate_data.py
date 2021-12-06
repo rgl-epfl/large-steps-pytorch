@@ -16,12 +16,12 @@ scene_name = "nefertiti"
 filename = os.path.join(SCENES_DIR, scene_name, scene_name + ".xml")
 
 params = {
-    "time": 2,
     "boost": 3,
     "alpha": 0.98,
     "loss": "l1"
 }
 
+steps = [2170, 1320, 2500, 2420]
 reg = [0,0,16,0]
 lr = [2e-3, 2e-3, 1e-2, 1e-2]
 opt = [AdamUniform, AdamUniform, torch.optim.Adam, torch.optim.Adam]
@@ -35,6 +35,7 @@ for j, method in enumerate(["ours", "remesh", "reg", "naive"]):
     params["optimizer"] = opt[j]
     params["smooth"] = smooth[j]
     params["remesh"] = remesh[j]
+    params["steps"] = steps[j]
 
     out = optimize_shape(filename, params)
     v = out["vert_steps"][-1] + out["tr_steps"][-1]

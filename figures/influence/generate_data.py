@@ -18,7 +18,7 @@ if not os.path.isdir(output_dir):
     os.makedirs(output_dir)
 
 params = {
-    "time": 2,
+    "steps": 4300,
     "loss": "l1",
     "boost" : 3,
     "step_size": 1e-3,

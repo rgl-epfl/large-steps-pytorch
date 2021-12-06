@@ -179,9 +179,10 @@ We provide the scripts for the following figures:
 - Fig. 8 -> `viewpoints`
 - Fig. 9 -> `influence`
 
-:warning: Several experiments are equal-time comparisons ran on a Linux
-Ryzen 3990X workstation with a TITAN RTX graphics card. you may have to change
-the timings to reproduce the results on a different machine.
+:warning: Several experiments are equal-time comparisons ran on a Linux Ryzen
+3990X workstation with a TITAN RTX graphics card. In order to ensure
+reproducibility, we have frozen the step counts for each method in these
+experiments.
 
 ## Repository structure
 

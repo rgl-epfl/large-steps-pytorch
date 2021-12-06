@@ -17,7 +17,6 @@ scene_name = "cranium"
 filename = os.path.join(folder, scene_name, scene_name + ".xml")
 
 params = {
-    "time": 1,
     "boost" : 3,
     "step_size": 1e-2,
     "loss": "l1",
@@ -26,6 +25,7 @@ params = {
     }
 
 remesh = [-1, -1, 750, 0]
+steps = [1890, 1800, 1630, 1500]
 masses = []
 verts = []
 faces = []
@@ -39,6 +39,7 @@ for i, method in enumerate(["reg", "base", "remesh_middle", "remesh_start"]):
         params["optimizer"] = AdamUniform
         params["reg"] = 0
 
+    params["steps"] = steps[i]
     params["remesh"] = remesh[i]
     out = optimize_shape(filename, params)
     v = out["vert_steps"][-1] + out["tr_steps"][-1]

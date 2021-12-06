@@ -20,7 +20,10 @@ output_dir = os.path.join(OUTPUT_DIR, os.path.basename(os.path.dirname(__file__)
 
 scenes = ["suzanne", "cranium", "bob", "bunny", "tshirt", "planck"]
 step_sizes = [2e-3, 5e-3, 3e-3, 1e-2, 3e-3, 3e-3]
-durations = [0.5, 1, 0.5, 0.75, 0.2, 0.5]
+
+# Frozen step counts for equal-time runs of all methods on our system
+steps_ours = [1080, 1820, 930, 1380, 370, 915]
+steps_baseline = [1130, 1910, 940, 1450, 390, 960]
 regs = [2.8, 0.21, 0.67, 3.8, 12, 3.8]
 regs_bi = [3.8, 0.16, 0.37, 2.1, 12, 5]
 
@@ -35,13 +38,13 @@ for i, scene in enumerate(scenes):
     output = os.path.join(output_dir, scene)
     if not os.path.isdir(output):
         os.makedirs(output)
-    params["time"] = durations[i]
-    for j, method in enumerate(["smooth", "reg", "bi"]):
+    for j, method in enumerate(["smooth", "lap", "bilap"]):
         if j == 0:
             params["reg"] = 0
             params["smooth"] = True
             params["optimizer"] = AdamUniform
             params["step_size"] = step_sizes[i]
+            params["steps"] = steps_ours[i]
         else:
             if j==1:
                 params["reg"] = regs[i]
@@ -52,6 +55,7 @@ for i, scene in enumerate(scenes):
             params["smooth"] = False
             params["optimizer"] = torch.optim.Adam
             params["step_size"] = 1e-2
+            params["steps"] = steps_baseline[i]
 
         torch.cuda.empty_cache()
         out = optimize_shape(filename, params)
