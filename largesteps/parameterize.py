@@ -28,14 +28,14 @@ def from_differential(L, u, method='Cholesky'):
 
     Parameters
     ----------
-    L : torch.spare.Tensor
-        (I +l*L) matrix
+    L : torch.sparse.Tensor
+        (I + l*L) matrix
     u : torch.Tensor
         Differential coordinates
     method : {'Cholesky', 'CG'}
         Solver to use.
     """
-    key = id(L)
+    key = (id(L), method)
     if key not in _cache.keys():
         if method == 'Cholesky':
             solver = CholeskySolver(L)
@@ -47,6 +47,5 @@ def from_differential(L, u, method='Cholesky'):
         cache_put(key, solver, L)
     else:
         solver = _cache[key][0]
-        # TODO: make sure that the method hasn't changed here
 
     return solve(solver, u)
