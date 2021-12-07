@@ -23,13 +23,13 @@ sudo apt-get update && apt-get install -y --no-install-recommends \
 git submodule update --init --recursive
 
 # Botsch-Kobbelt remesher
-cd botsch-kobbelt-remesher-libigl
+cd ext/botsch-kobbelt-remesher-libigl
 mkdir -p build
 cd build
 cmake ..
 make -j
-cd ../..
+cd ../../..
 
 # nvdiffrast
-cd nvdiffrast
+cd ext/nvdiffrast
 pip install .
