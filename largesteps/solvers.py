@@ -4,6 +4,7 @@ import scipy.sparse as sp
 import sksparse.cholmod as cholmod
 import cupy as cp
 import cupyx.scipy.sparse as cps
+import torch
 
 from cupy._core.dlpack import toDlpack
 from cupy._core.dlpack import fromDlpack
@@ -80,11 +81,6 @@ def prepare(A, transpose, blocking=True, level_info=True):
 class Solver:
     """
     Sparse linear system solver base class.
-
-    Methods
-    -------
-    solve
-        Method called to solve the linear system in the forward  and backward pass
     """
     def __init__(self, M):
         pass
@@ -147,7 +143,7 @@ class ConjugateGradientSolver(Solver):
     """
     Conjugate gradients solver.
     """
-    def __init__(self, M, use_guess=False):
+    def __init__(self, M):
         """
         Initialize the solver.
 
@@ -156,12 +152,46 @@ class ConjugateGradientSolver(Solver):
         M : torch.sparse_coo_tensor
             Linear system matrix.
         """
-        self.guess = None
+        self.guess_fwd = None
+        self.guess_bwd = None
         self.M = M
+
+    def solve_axis(self, b, x0):
+        """
+        Solve a single linear system with Conjugate Gradients.
+
+        Parameters:
+        -----------
+        b : torch.Tensor
+            The right hand side of the system Ax=b.
+        x0 : torch.Tensor
+            Initial guess for the solution.
+        """
+        x = x0
+        r = self.M @ x - b
+        p = -r
+        r_norm = r.norm()
+        while r_norm > 1e-5:
+            Ap = self.M @ p
+            r2 = r_norm.square()
+            alpha = r2 / (p * Ap).sum(dim=0)
+            x = x + alpha*p
+            r_old = r
+            r_old_norm = r_norm
+            r = r + alpha*Ap
+            r_norm = r.norm()
+            beta = r_norm.square() / r2
+            p = -r + beta*p
+        return x
 
     def solve(self, b, backward=False):
         """
         Solve the sparse linear system.
+
+        There is actually one linear system to solve for each axis in b
+        (typically x, y and z), and we have to solve each separately with CG.
+        Therefore this method calls self.solve_axis for each individual system
+        to form the solution.
 
         Parameters
         ----------
@@ -170,29 +200,30 @@ class ConjugateGradientSolver(Solver):
         backward : bool
             Whether we are in the backward or the forward pass.
         """
-        if not backward and self.guess is not None:
-            x = self.guess # Value at previous iteration
-        else:
-            x = torch.zeros_like(b)
+        if self.guess_fwd is None:
+            # Initialize starting guesses in the first run
+            self.guess_bwd = torch.zeros_like(b)
+            self.guess_fwd = torch.zeros_like(b)
 
-        r = b - self.M @ x
-        p = r
-        n = 0
-        r_norm = r.norm().square()
-        while r_norm > 1e-7:
-            Ap = self.M @ p
-            alpha = r_norm / (p * Ap).sum(dim=0)
-            x = x + alpha*p
-            r_old = r
-            r_old_norm = r_norm
-            r = r - alpha*Ap
-            r_norm = r.norm().square()
-            beta = r_norm / r_old_norm
-            p = r + beta*p
-        if not backward:
+        if backward:
+            x0 = self.guess_bwd
+        else:
+            x0 = self.guess_fwd
+
+        if len(b.shape) != 2:
+            raise ValueError(f"Invalid array shape {b.shape} for ConjugateGradientSolver.solve: expected shape (a, b)")
+
+        x = torch.zeros_like(b)
+        for axis in range(b.shape[1]):
+            # We have to solve for each axis separately for CG to converge
+            x[:, axis] = self.solve_axis(b[:, axis], x0[:, axis])
+
+        if backward:
             # Update initial guess for next iteration
-            self.guess = x
-        #TODO: try guess on backward as well
+            self.guess_bwd = x
+        else:
+            self.guess_fwd = x
+
         return x
 
 class DifferentiableSolve(Function):
