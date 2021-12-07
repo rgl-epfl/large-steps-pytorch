@@ -130,10 +130,10 @@ def optimize_shape(filepath, params):
     else:
         remesh_it = remesh
 
+
     # Optimization loop
     with tqdm(total=max(steps, opt_time), ncols=100, bar_format="{l_bar}{bar}| {n:.2f}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]") as pbar:
         while it < steps or (t-t0) < opt_time:
-
             if it == remesh_it:
                 # Remesh
                 with torch.no_grad():
@@ -172,7 +172,6 @@ def optimize_shape(filepath, params):
             if smooth:
                 v_unique = from_differential(M, u_unique, solver)
 
-            #TODO: save, timing
             # Get the version of the mesh with the duplicates
             v_opt = v_unique[duplicate_idx]
             # Recompute vertex normals
@@ -217,43 +216,3 @@ def optimize_shape(filepath, params):
 
     result_dict["losses"] = np.array(result_dict["losses"])
     return result_dict
-
-if __name__ == "__main__":
-    #TODO: update this
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Optimize the geometry of a mesh.")
-    parser.add_argument("scene", type=os.path.abspath, help="Path to the folder containing the 'scene.xml' file.")
-    parser.add_argument("--name", type=str)
-    parser.add_argument("--time", type=float, default=-1) #optimization time (in minutes)
-    parser.add_argument("--steps", type=int, default=100)
-    parser.add_argument("--step_size", type=float, default=0.01)
-    parser.add_argument("--boost", type=float, default=1)
-    parser.add_argument("--smooth", action="store_true")
-    parser.add_argument("--reg", type=float, default=0.0)
-    parser.add_argument("--output", type=os.path.abspath, default="/home/bnicolet/Documents/.optim")
-    parser.add_argument("--influence", type=float, default=1.0)
-    parser.add_argument("--remesh", type=int, default=-1)
-    parser.add_argument("--adam", action="store_true")
-    parser.add_argument("--profile", action="store_true")
-    parser.add_argument("--loss", type=str, default="l1")
-    parser.add_argument("--bilaplacian", action="store_true")
-    parser.add_argument("--precond", action="store_true")
-    parser.add_argument("--deg", type=int, default=2)
-
-    args = parser.parse_args()
-    params = vars(args)
-    if args.adam:
-        params["optimizer"] = torch.optim.Adam
-    else:
-        params["optimizer"] = AdamUniform
-    out = optimize_shape(args.scene, params)
-    if not os.path.isdir(args.output):
-        os.makedirs(args.output)
-
-    loss = out["losses"][:,0]
-    np.save(os.path.join(args.output, f"{args.name}_loss.npy"), loss)
-    # Write result
-    v = out["vert_steps"][-1] + out["tr_steps"][-1]
-    f = out["f"][-1]
-    write_obj(os.path.join(args.output, f"{args.name}.obj"), v, f)

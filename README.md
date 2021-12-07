@@ -40,7 +40,7 @@
     <li>
       <a href="#how-to-use-this-repo">How to use this repo?</a>
       <ul>
-        <li><a href="#installing">Installing</a></li>
+        <li><a href="#installation">Installation</a></li>
         <li><a href="#parameterization">Parameterization</a></li>
       </ul>
     </li>
@@ -76,7 +76,7 @@ This repository contains both the operators needed to use our parameterization
 of vertex positions of meshes as well as the code for the experiments we show in
 the paper.
 
-### Installing
+### Installation
 
 If you are only interested in using our parameterization in an existing (PyTorch
 based) pipeline, you can simply install it with:
@@ -125,8 +125,8 @@ v = from_differential(u, M)
 ```
 
 This will in practice perform a cache lookup for a solver associated to the
-matrix M (and instantiate one if not found) and solve the linear system
-$\mathbf{Mv} = \mathbf{u}$. Further calls to `from_differential` with the same
+matrix **M** (and instantiate one if not found) and solve the linear system
+**Mv** = **u**. Further calls to `from_differential` with the same
 matrix will use the solver stored in the cache. Since this operation is
 implemented as a differentiable PyTorch operation, there is nothing more to be
 done to optimize this parameterization.
@@ -164,7 +164,7 @@ Please extract the archive at the toplevel of this repository.
 
 You can then run the experiments in the `figures` folder, in which each
 subfolder corresponds to a figure in the paper, and contains two files:
-- `generate_data.py`: contatins the script to run the experiment and write the
+- `generate_data.py`: contains the script to run the experiment and write the
   output to the directory specified in `scripts/constants.py`
 - `figure.ipynb`: contains the script generating the figure, assuming
   `generate_data.py` has been run before and the output written to the directory

@@ -17,6 +17,16 @@ def cache_put(key, value, A):
     _cache[key] = (value, wr)
 
 def to_differential(L, v):
+    """
+    Convert vertex coordinates to the differential parameterization.
+
+    Parameters
+    ----------
+    L : torch.sparse.Tensor
+        (I + l*L) matrix
+    v : torch.Tensor
+        Vertex coordinates
+    """
     return L @ v
 
 def from_differential(L, u, method='Cholesky'):
