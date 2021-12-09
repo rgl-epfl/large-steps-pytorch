@@ -38,17 +38,15 @@
   <summary>Table of Contents</summary>
   <ol>
     <li>
-      <a href="#how-to-use-this-repo">How to use this repo?</a>
+      <a href="#installation">Installation</a>
       <ul>
-        <li><a href="#installation">Installation</a></li>
-        <li><a href="#parameterization">Parameterization</a></li>
+        <li><a href="#parameterization-package-installation">Parameterization package installation</a></li>
+        <li><a href="#cloning-the-repository">Cloning the repository</a></li>
+        <li><a href="#downloading-the-scenes">Downloading the scenes</a></li>
       </ul>
     </li>
     <li>
-      <a href="#dependencies">Dependencies</a>
-      <ul>
-        <li><a href="#downloading-the-scenes">Downloading the scenes</a></li>
-      </ul>
+      <a href="#parameterization">Parameterization</a>
     </li>
     <li>
       <a href="#running-the-experiments">Running the experiments</a>
@@ -70,16 +68,37 @@
 <br />
 <br />
 
-## How to use this repo?
+## Installation
 
 This repository contains both the operators needed to use our parameterization
 of vertex positions of meshes as well as the code for the experiments we show in
 the paper.
-
-### Installation
+### Parameterization package installation
 
 If you are only interested in using our parameterization in an existing (PyTorch
-based) pipeline, you can simply install it with:
+based) pipeline, we have made it available to install via `pip`. However, it
+depends on `cupy` and `scikit-sparse`, which need to be installed manually
+beforehand. We first need to install the `suitesparse` dependency.
+
+```bash
+# Ubuntu/Debian
+apt install libsuitesparse-dev
+# Fedora
+yum install suitesparse-devel
+# Arch linux
+pacman -S suitesparse
+# Mac OS X
+brew install suite-sparse
+```
+
+Then install the python dependencies via `pip`:
+
+```bash
+pip install cupy-cudaXXX # Adjust this to your CUDA version, following https://docs.cupy.dev/en/stable/install.html#installing-cupy
+pip install scikit-sparse
+```
+
+Then, install our package:
 
 ```bash
 pip install largesteps
@@ -89,52 +108,21 @@ This will install the `largesteps` module. This only contains the
 parameterization logic implemented as a PyTorch custom operator. See the
 [tutorial](Tutorial.ipynb) for an example use case.
 
+### Cloning the repository
+
 Otherwise, if you want to reproduce the experiments from the paper, you can
-clone this repo and install the module locally:
+clone this repo and install the module locally. Make sure you have installed the
+`cupy` and `scikit-sparse` dependencies mentioned above before.
+
 ```bash
 git clone --recursive git@github.com:rgl-epfl/large-steps-pytorch.git
 cd large-steps-pytorch
 pip install .
 ```
 
-### Parameterization
-
-In a nutshell, our parameterization can be obtained in just a few lines:
-
-```python
-# Given tensors v and f containing vertex positions and faces
-from largesteps.geometry import laplacian_uniform, compute_matrix
-from largesteps.parameterize import to_differential, from_differential
-L = laplacian_uniform(v, f)
-M = compute_matrix(L, lambda_=10)
-u = to_differential(v, M)
-```
-
-`compute_matrix` returns the parameterization matrix **I** + λ**L**. This
-function takes another parameter, `alpha`, which leads to a slightly different,
-but equivalent, formula for the matrix: (1-α)**I** + α**L**, with α ∈ [0,1[:
-
-```python
-M = compute_matrix(L, alpha=0.9)
-```
-
-Then, vertex coordinates can be retrieved as:
-
-```python
-v = from_differential(u, M)
-```
-
-This will in practice perform a cache lookup for a solver associated to the
-matrix **M** (and instantiate one if not found) and solve the linear system
-**Mv** = **u**. Further calls to `from_differential` with the same
-matrix will use the solver stored in the cache. Since this operation is
-implemented as a differentiable PyTorch operation, there is nothing more to be
-done to optimize this parameterization.
-
-## Dependencies
-
 The experiments in this repository depend on PyTorch. Please follow instructions on
 the PyTorch [website](https://pytorch.org/get-started/locally/) to install it.
+
 To install `nvdiffrast` and the Botsch-Kobbelt remesher, which are provided as
 submodules, please run the `setup_dependencies.sh` script.
 
@@ -159,6 +147,42 @@ blender executable you wish to use in `scripts/constants.py`
 The scenes for the experiments can be downloaded
 [here](https://rgl.s3.eu-central-1.amazonaws.com/media/papers/Nicolet2021Large.zip).
 Please extract the archive at the toplevel of this repository.
+
+## Parameterization
+
+In a nutshell, our parameterization can be obtained in just a few lines:
+
+```python
+# Given tensors v and f containing vertex positions and faces
+from largesteps.geometry import laplacian_uniform, compute_matrix
+from largesteps.parameterize import to_differential, from_differential
+L = laplacian_uniform(v, f)
+M = compute_matrix(L, lambda_=10)
+u = to_differential(v, M)
+```
+
+`compute_matrix` returns the parameterization matrix **M** = **I** + λ**L**.
+This function takes another parameter, `alpha`, which leads to a slightly
+different, but equivalent, formula for the matrix: **M** = (1-α)**I** + α**L**,
+with α ∈ [0,1[. With this formula, the scale of the matrix **M** has the same
+order of magnitude regardless of α.
+
+```python
+M = compute_matrix(L, alpha=0.9)
+```
+
+Then, vertex coordinates can be retrieved as:
+
+```python
+v = from_differential(u, M, method='Cholesky')
+```
+
+This will in practice perform a cache lookup for a solver associated to the
+matrix **M** (and instantiate one if not found) and solve the linear system
+**Mv** = **u**. Further calls to `from_differential` with the same
+matrix will use the solver stored in the cache. Since this operation is
+implemented as a differentiable PyTorch operation, there is nothing more to be
+done to optimize this parameterization.
 
 ## Running the experiments
 
