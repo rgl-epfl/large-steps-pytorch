@@ -11,6 +11,11 @@ from cupy._core.dlpack import fromDlpack
 from torch.utils.dlpack import to_dlpack
 from torch.utils.dlpack import from_dlpack
 
+import cupy as _cupy
+from cupy.cuda import device as _device
+from cupy_backends.cuda.libs import cusparse as _cusparse
+import cupyx.scipy.sparse
+
 def torch_to_cupy(x):
     """
     Convert a PyTorch tensor to a CuPy array.
@@ -22,61 +27,6 @@ def cupy_to_torch(x):
     Convert a CuPy array to a PyTorch tensor.
     """
     return from_dlpack(toDlpack(x))
-
-def prepare(A, transpose, blocking=True, level_info=True):
-    import cupy as _cupy
-    from cupy.cuda import device as _device
-    from cupy_backends.cuda.libs import cusparse as _cusparse
-    import cupyx.scipy.sparse
-
-    policy = _cusparse.CUSPARSE_SOLVE_POLICY_USE_LEVEL if level_info \
-        else _cusparse.CUSPARSE_SOLVE_POLICY_NO_LEVEL
-    algo = 1 if blocking else 0
-
-    transa = _cusparse.CUSPARSE_OPERATION_TRANSPOSE if transpose \
-        else _cusparse.CUSPARSE_OPERATION_NON_TRANSPOSE
-    transb = _cusparse.CUSPARSE_OPERATION_TRANSPOSE
-    fill_mode = _cusparse.CUSPARSE_FILL_MODE_LOWER
-
-    if cupyx.scipy.sparse.isspmatrix_csc(A):
-        A = A.T
-        transa = 1 - transa
-        fill_mode = 1 - fill_mode
-
-    assert cupyx.scipy.sparse.isspmatrix_csr(A)
-
-    handle = _device.get_cusparse_handle()
-    info = _cusparse.createCsrsm2Info()
-    m = A.shape[0]
-    alpha = np.array(1, dtype=np.float32)
-    desc = _cusparse.createMatDescr()
-    _cusparse.setMatType(desc, _cusparse.CUSPARSE_MATRIX_TYPE_GENERAL)
-    _cusparse.setMatIndexBase(desc, _cusparse.CUSPARSE_INDEX_BASE_ZERO)
-    _cusparse.setMatFillMode(desc, fill_mode)
-    _cusparse.setMatDiagType(desc, _cusparse.CUSPARSE_DIAG_TYPE_NON_UNIT)
-
-    nrhs = 3
-    ldb = nrhs
-
-    ws_size = _cusparse.scsrsm2_bufferSizeExt(
-        handle, algo, transa, transb, m, nrhs, A.nnz, alpha.ctypes.data,
-        desc, A.data.data.ptr, A.indptr.data.ptr, A.indices.data.ptr,
-        0, ldb, info, policy)
-
-    ws = _cupy.empty((ws_size,), dtype=np.int8)
-
-    _cusparse.scsrsm2_analysis(
-         handle, algo, transa, transb, m, nrhs, A.nnz, alpha.ctypes.data,
-         desc, A.data.data.ptr, A.indptr.data.ptr,
-         A.indices.data.ptr, 0, ldb, info, policy, ws.data.ptr)
-
-    def solver(b):
-        _cusparse.scsrsm2_solve(
-            handle, algo, transa, transb, m, nrhs, A.nnz, alpha.ctypes.data,
-            desc, A.data.data.ptr, A.indptr.data.ptr, A.indices.data.ptr,
-            b.data.ptr, ldb, info, policy, ws.data.ptr)
-
-    return solver
 
 class Solver:
     """
@@ -105,6 +55,68 @@ class CholeskySolver(Solver):
     Precomputes the Cholesky decomposition of the system matrix and solves the
     system by back-substitution.
     """
+
+    def __del__(self):
+        if hasattr(self, 'infos'):
+            for info in self.infos:
+                _cusparse.destroyCsrsm2Info(info)
+        if hasattr(self, 'descs'):
+            for desc in self.descs:
+                _cusparse.destroyMatDescr(desc)
+
+
+    def prepare(self, A, transpose, blocking=True, level_info=True):
+        policy = _cusparse.CUSPARSE_SOLVE_POLICY_USE_LEVEL if level_info \
+            else _cusparse.CUSPARSE_SOLVE_POLICY_NO_LEVEL
+        algo = 1 if blocking else 0
+
+        transa = _cusparse.CUSPARSE_OPERATION_TRANSPOSE if transpose \
+            else _cusparse.CUSPARSE_OPERATION_NON_TRANSPOSE
+        transb = _cusparse.CUSPARSE_OPERATION_TRANSPOSE
+        fill_mode = _cusparse.CUSPARSE_FILL_MODE_LOWER
+
+        if cupyx.scipy.sparse.isspmatrix_csc(A):
+            A = A.T
+            transa = 1 - transa
+            fill_mode = 1 - fill_mode
+
+        assert cupyx.scipy.sparse.isspmatrix_csr(A)
+
+        handle = _device.get_cusparse_handle()
+        info = _cusparse.createCsrsm2Info()
+        self.infos.append(info) # will cause memory leak if not freed manully
+        m = A.shape[0]
+        alpha = np.array(1, dtype=np.float32)
+        desc = _cusparse.createMatDescr()
+        self.descs.append(desc) # will cause memory leak if not freed manully
+        _cusparse.setMatType(desc, _cusparse.CUSPARSE_MATRIX_TYPE_GENERAL)
+        _cusparse.setMatIndexBase(desc, _cusparse.CUSPARSE_INDEX_BASE_ZERO)
+        _cusparse.setMatFillMode(desc, fill_mode)
+        _cusparse.setMatDiagType(desc, _cusparse.CUSPARSE_DIAG_TYPE_NON_UNIT)
+
+        nrhs = 3
+        ldb = nrhs
+
+        ws_size = _cusparse.scsrsm2_bufferSizeExt(
+            handle, algo, transa, transb, m, nrhs, A.nnz, alpha.ctypes.data,
+            desc, A.data.data.ptr, A.indptr.data.ptr, A.indices.data.ptr,
+            0, ldb, info, policy)
+
+        ws = _cupy.empty((ws_size,), dtype=np.int8)
+
+        _cusparse.scsrsm2_analysis(
+            handle, algo, transa, transb, m, nrhs, A.nnz, alpha.ctypes.data,
+            desc, A.data.data.ptr, A.indptr.data.ptr,
+            A.indices.data.ptr, 0, ldb, info, policy, ws.data.ptr)
+
+        def solver(b):
+            _cusparse.scsrsm2_solve(
+                handle, algo, transa, transb, m, nrhs, A.nnz, alpha.ctypes.data,
+                desc, A.data.data.ptr, A.indptr.data.ptr, A.indices.data.ptr,
+                b.data.ptr, ldb, info, policy, ws.data.ptr)
+
+        return solver
+
     def __init__(self, M):
         """
         Initialize the solver
@@ -127,8 +139,10 @@ class CholeskySolver(Solver):
         self.U = self.L.T
         self.P = cp.array(P)
         self.Pi = cp.array(Pi)
-        self.solver_1 = prepare(self.L, False, False, True)
-        self.solver_2 = prepare(self.L, True, False, True)
+        self.infos = [] # cusparse allocation records (needs manual freeing in __del__)
+        self.descs = [] # cusparse allocation records (needs manual freeing in __del__)
+        self.solver_1 = self.prepare(self.L, False, False, True)
+        self.solver_2 = self.prepare(self.L, True, False, True)
 
     def solve(self, b, backward=False):
         """
