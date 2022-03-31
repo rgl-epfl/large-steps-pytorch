@@ -65,7 +65,7 @@ class CholeskySolver(Solver):
                 _cusparse.destroyMatDescr(desc)
 
 
-    def prepare(self, A, transpose, blocking=True, level_info=True):
+    def prepare(self, A, transpose, blocking=True, level_info=True, nrhs=3):
         policy = _cusparse.CUSPARSE_SOLVE_POLICY_USE_LEVEL if level_info \
             else _cusparse.CUSPARSE_SOLVE_POLICY_NO_LEVEL
         algo = 1 if blocking else 0
@@ -94,7 +94,6 @@ class CholeskySolver(Solver):
         _cusparse.setMatFillMode(desc, fill_mode)
         _cusparse.setMatDiagType(desc, _cusparse.CUSPARSE_DIAG_TYPE_NON_UNIT)
 
-        nrhs = 3
         ldb = nrhs
 
         ws_size = _cusparse.scsrsm2_bufferSizeExt(
@@ -117,7 +116,7 @@ class CholeskySolver(Solver):
 
         return solver
 
-    def __init__(self, M):
+    def __init__(self, M, nrhs=3):
         """
         Initialize the solver
 
@@ -141,8 +140,8 @@ class CholeskySolver(Solver):
         self.Pi = cp.array(Pi)
         self.infos = [] # cusparse allocation records (needs manual freeing in __del__)
         self.descs = [] # cusparse allocation records (needs manual freeing in __del__)
-        self.solver_1 = self.prepare(self.L, False, False, True)
-        self.solver_2 = self.prepare(self.L, True, False, True)
+        self.solver_1 = self.prepare(self.L, False, False, True, nrhs)
+        self.solver_2 = self.prepare(self.L, True, False, True, nrhs)
 
     def solve(self, b, backward=False):
         """

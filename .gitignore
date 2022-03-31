@@ -2,4 +2,5 @@
 scenes/*
 output/*
 *.ipynb_checkpoints*
-
+build
+*.egg-info
