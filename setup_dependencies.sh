@@ -17,7 +17,8 @@ sudo apt-get update && apt-get install -y --no-install-recommends \
     dvipng \
     texlive-latex-extra \
     texlive-fonts-recommended \
-    cm-super
+    cm-super \
+    libeigen3-dev
 
 # Make sure submodules are checked out
 git submodule update --init --recursive
