@@ -207,10 +207,11 @@ class NVDRenderer:
         if self.shading:
             v_cols = torch.zeros_like(v)
 
+            # Sample envmap at each vertex using the SH approximation
+            vert_light = self.sh.eval(n).contiguous()
             # Sample incoming radiance
-            pixel_normals = dr.interpolate(n[None, ...], rast, f)[0]
-            # Sample envmap using the SH approximation
-            light = self.sh.eval(pixel_normals)
+            light = dr.interpolate(vert_light[None, ...], rast, f)[0]
+
             col = torch.cat((light / np.pi, torch.ones((*light.shape[:-1],1), device='cuda')), dim=-1)
             result = dr.antialias(torch.where(rast[..., -1:] != 0, col, self.bgs), rast, v_ndc, f, pos_gradient_boost=self.boost)
         else:
