@@ -76,29 +76,7 @@ the paper.
 ### Parameterization package installation
 
 If you are only interested in using our parameterization in an existing (PyTorch
-based) pipeline, we have made it available to install via `pip`. However, it
-depends on `cupy` and `scikit-sparse`, which need to be installed manually
-beforehand. We first need to install the `suitesparse` dependency.
-
-```bash
-# Ubuntu/Debian
-apt install libsuitesparse-dev
-# Fedora
-yum install suitesparse-devel
-# Arch linux
-pacman -S suitesparse
-# Mac OS X
-brew install suite-sparse
-```
-
-Then install the python dependencies via `pip`:
-
-```bash
-pip install cupy-cudaXXX # Adjust this to your CUDA version, following https://docs.cupy.dev/en/stable/install.html#installing-cupy
-pip install scikit-sparse
-```
-
-Then, install our package:
+based) pipeline, we have made it available to install via `pip`:
 
 ```bash
 pip install largesteps
@@ -111,8 +89,7 @@ parameterization logic implemented as a PyTorch custom operator. See the
 ### Cloning the repository
 
 Otherwise, if you want to reproduce the experiments from the paper, you can
-clone this repo and install the module locally. Make sure you have installed the
-`cupy` and `scikit-sparse` dependencies mentioned above before.
+clone this repo and install the module locally.
 
 ```bash
 git clone --recursive git@github.com:rgl-epfl/large-steps-pytorch.git

@@ -10,6 +10,7 @@ setup(
     license='BSD',
     packages=['largesteps'],
     install_requires=['numpy',
-                        'scipy',
+                      'scipy',
+                      'cholespy'
                       ],
 )
