@@ -35,7 +35,7 @@ class CholeskySolver():
 
     def solve(self, b, backward=False):
         x = torch.zeros_like(b)
-        self.solver.solve(b, x)
+        self.solver.solve(b.detach(), x)
         return x
 
 class ConjugateGradientSolver(Solver):
