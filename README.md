@@ -139,9 +139,12 @@ In a nutshell, our parameterization can be obtained in just a few lines:
 # Given tensors v and f containing vertex positions and faces
 from largesteps.geometry import laplacian_uniform, compute_matrix
 from largesteps.parameterize import to_differential, from_differential
-L = laplacian_uniform(v, f)
-M = compute_matrix(L, lambda_=10)
-u = to_differential(v, M)
+
+# Compute the system matrix
+M = compute_matrix(v, f, lambda_=10)
+
+# Parameterize
+u = to_differential(M, v)
 ```
 
 `compute_matrix` returns the parameterization matrix **M** = **I** + λ**L**.
