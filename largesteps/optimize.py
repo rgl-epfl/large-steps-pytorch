@@ -20,6 +20,8 @@ class AdamUniform(torch.optim.Optimizer):
             lr = group['lr']
             b1, b2 = group['betas']
             for p in group["params"]:
+                if p.grad is None:
+                    continue
                 state = self.state[p]
                 # Lazy initialization
                 if len(state)==0:
