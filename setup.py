@@ -7,7 +7,7 @@ readme = (this_directory / "README.md").read_text()
 
 setup(
     name='largesteps',
-    version='0.2.1',
+    version='0.2.2',
     description='Laplacian parameterization package for shape optimization with differentiable rendering',
     url='https://github.com/rgl-epfl/large-steps-pytorch',
     author='Baptiste Nicolet',
