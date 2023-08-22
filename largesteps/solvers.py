@@ -141,7 +141,7 @@ class DifferentiableSolve(Function):
         solver_grad = None # We have to return a gradient per input argument in forward
         b_grad = None
         if ctx.needs_input_grad[1]:
-            b_grad = ctx.solver.solve(grad_output, backward=True)
+            b_grad = ctx.solver.solve(grad_output.contiguous(), backward=True)
         return (solver_grad, b_grad)
 
 # Alias for DifferentiableSolve function
